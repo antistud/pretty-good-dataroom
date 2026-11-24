@@ -6,14 +6,14 @@
 /** stage 0..4: seed, sprout, two leaves, four leaves, in bloom. */
 export function Sprout({ stage, size = 72 }: { stage: number; size?: number }) {
   const s = Math.max(0, Math.min(4, Math.round(stage)));
-  const stem = [0, 10, 18, 26, 32][s];
+  const stem = [5, 10, 18, 26, 32][s];
   const top = 50 - stem;
   return (
-    <svg className="sprout" width={size} height={size} viewBox="0 0 64 64" role="img" aria-label={`Progress: stage ${s + 1} of 5`}>
+    <svg className="sprout" width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
       <ellipse cx="32" cy="54" rx="20" ry="5" fill="var(--line)" />
       <path d="M16 54a16 6 0 0 1 32 0z" fill="var(--accent)" opacity="0.55" />
-      {s === 0 && <ellipse cx="32" cy="49" rx="4" ry="3" fill="var(--brand)" />}
-      {s > 0 && <path d={`M32 52 V${top}`} stroke="var(--brand)" strokeWidth="2.5" strokeLinecap="round" fill="none" />}
+      {s === 0 && <path className="leaf" d={`M32 ${top + 1} c1 -5 5 -7 8 -6 c0 4 -3 7 -8 6z`} fill="var(--brand)" />}
+      {<path d={`M32 52 V${top}`} stroke="var(--brand)" strokeWidth="2.5" strokeLinecap="round" fill="none" />}
       {s >= 1 && <path className="leaf" d={`M32 ${top + 2} c1 -8 8 -11 13 -10 c0 7 -5 11 -13 10z`} fill="var(--brand)" />}
       {s >= 2 && <path className="leaf" d={`M32 ${top + 5} c-1 -7 -7 -10 -12 -9 c0 6 5 10 12 9z`} fill="var(--brand)" opacity="0.8" />}
       {s >= 3 && <path className="leaf" d={`M32 ${top + 14} c1 -6 7 -8 11 -7 c0 5 -4 8 -11 7z`} fill="var(--brand)" opacity="0.9" />}

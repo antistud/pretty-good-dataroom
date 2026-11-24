@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Welcome } from "@/components/Garden";
 import type { Viewer } from "@/lib/auth";
 import { canSeeSection } from "@/lib/auth";
 import { getSetting, q } from "@/lib/db";
@@ -19,12 +20,9 @@ export default async function SupporterHome({ me }: { me: Viewer }) {
 
   return (
     <>
-      <div className="page-head">
-        <div>
-          <h1>Welcome, {me.name.split(" ")[0]}</h1>
-          <div className="sub">Thank you for backing {company}. This is where you follow along and where you can help.</div>
-        </div>
-      </div>
+      <Welcome title={`Welcome, ${me.name.split(" ")[0]}`} stage={3}>
+        Thank you for backing {company}. This is where you follow along and where you can help.
+      </Welcome>
 
       <Hint title="What being a supporter means">
         You get the monthly update: what went well, what did not, and what the founders need. That is it. No paperwork and nothing to review.

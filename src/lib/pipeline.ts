@@ -224,6 +224,9 @@ function describe(action: string, detail: string | null, docName: string | null)
     case "update.view": return "read an investor update";
     case "page.view": return `read a page${detail ? ` (${detail})` : ""}`;
     case "invite.create": return `invited a colleague${detail ? ` (${detail.split(" ")[0]})` : ""}`;
+    case "request.create": return `asked: ${(detail ?? "").replace(/^[a-z]+: /, "")}`;
+    case "request.reply": return "replied on a request";
+    case "intro.offer": return `offered an introduction to ${detail ?? "someone"}`;
     default: return action.replace(/[._]/g, " ") + (detail ? `: ${detail}` : "");
   }
 }

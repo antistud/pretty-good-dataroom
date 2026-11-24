@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Welcome } from "@/components/Garden";
 import type { Viewer } from "@/lib/auth";
 import { canSeeSection } from "@/lib/auth";
 import { getSetting, q } from "@/lib/db";
@@ -38,14 +39,9 @@ export default async function InvestorHome({ me }: { me: Viewer }) {
 
   return (
     <>
-      <div className="page-head">
-        <div>
-          <h1>Welcome, {me.name.split(" ")[0]}</h1>
-          <div className="sub">
-            This is {company}&apos;s data room{me.orgName ? <> for <strong>{me.orgName}</strong></> : null}: everything you need to evaluate the company, in the order we suggest you read it.
-          </div>
-        </div>
-      </div>
+      <Welcome title={`Welcome, ${me.name.split(" ")[0]}`} stage={Math.round((pctDone / 100) * 4)}>
+        This is {company}&apos;s data room{me.orgName ? <> for <strong>{me.orgName}</strong></> : null}: everything you need to evaluate the company, in the order we suggest you read it.
+      </Welcome>
 
       <div className="card">
         {allDone ? (

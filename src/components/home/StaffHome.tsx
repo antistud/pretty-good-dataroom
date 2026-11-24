@@ -5,7 +5,9 @@ import { ago, money, monthLabel } from "@/lib/format";
 import { updateDue } from "@/lib/updates";
 import { currentRound, roundTotals } from "@/lib/rounds";
 import { ACTIVE_STAGES, recentExternalActivity, suggestions, today, type Lead } from "@/lib/pipeline";
-import { Hint, PageHead } from "@/components/ui";
+import { Hint } from "@/components/ui";
+import { Journey, Welcome } from "@/components/Garden";
+import { SEASONS, currentSeason, noteOfTheDay } from "@/lib/mentor";
 
 type Item = { text: string; href: string; cta: string; urgent?: boolean };
 type RoundLite = { id: number; name: string; status: string; target_amount: number | null };
@@ -69,10 +71,27 @@ export default async function StaffHome({ me }: { me: Viewer }) {
   const upcoming = leads.filter((l) => l.next_action_due && l.next_action_due > t).slice(0, 5);
   const recent = recentExternalActivity(10);
   const firstName = me.name.split(" ")[0];
+  const seasonIndex = currentSeason();
+  const season = SEASONS[seasonIndex];
+  const hour = new Date().getUTCHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Hello" : "Good evening";
+  const topItems = items.slice(0, 5);
+  const moreItems = items.slice(5);
 
   return (
     <>
-      <PageHead title={`Today, ${firstName}`} sub="Everything that needs you, most urgent first. Work down the list and you are done." />
+      <Welcome title={`${greeting}, ${firstName}`} stage={Math.min(4, seasonIndex)}>
+        {items.length === 0 ? "Nothing urgent is waiting on you today." : items.length === 1 ? "One thing needs you today." : `${items.length} things need you today. Start at the top; one at a time is plenty.`}
+      </Welcome>
+
+      <div className="card">
+        <div className="spread">
+          <h2 style={{ margin: 0 }}>{season.title}</h2>
+          <Link className="small" href={`/guide#${season.key}`}>Open your founder guide</Link>
+        </div>
+        <Journey stops={SEASONS.map((x) => ({ label: x.label, hint: x.title }))} current={seasonIndex} />
+        <p className="muted" style={{ margin: "10px 0 0", maxWidth: "75ch" }}>{season.summary}</p>
+      </div>
 
       {setupLeft > 0 && (
         <div className="card">
@@ -110,7 +129,7 @@ export default async function StaffHome({ me }: { me: Viewer }) {
             <div className="second" style={{ width: widthOf(wired) }} />
             <div style={{ width: widthOf(Math.max(0, total - wired)) }} />
           </div>
-          <div className="muted small" style={{ marginTop: 6 }}>Green is wired, blue is committed or signed but not yet wired.</div>
+          <div className="muted small" style={{ marginTop: 6 }}>The warm colour is money in the bank; green is committed or signed and still to be wired.</div>
         </div>
       ) : setupLeft === 0 ? (
         <Hint title="No round is open">Create your next round under <Link href="/rounds">Rounds</Link> to track commitments against a target.</Hint>
@@ -121,17 +140,35 @@ export default async function StaffHome({ me }: { me: Viewer }) {
         {items.length === 0 ? (
           <div className="empty">Nothing is waiting on you. {leads.length === 0 ? <>Add a lead to the <Link href="/pipeline">pipeline</Link> to get going.</> : "Good moment to reach out to a new investor."}</div>
         ) : (
-          <ul className="steps">
-            {items.map((it, i) => (
-              <li key={i} className={it.urgent ? "next" : ""}>
-                <span className="tick" style={it.urgent ? { color: "var(--brand)" } : undefined}>{it.urgent ? "!" : ""}</span>
-                <div className="step-body">{it.text}</div>
-                <Link className={`btn small ${i === 0 ? "primary" : ""}`} href={it.href}>{it.cta}</Link>
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul className="steps">
+              {topItems.map((it, i) => (
+                <li key={i} className={i === 0 ? "next" : ""}>
+                  <span className="tick" style={it.urgent ? { color: "var(--accent)", borderColor: "var(--accent)" } : undefined}>{it.urgent ? "!" : ""}</span>
+                  <div className="step-body">{it.text}</div>
+                  <Link className={`btn small ${i === 0 ? "primary" : ""}`} href={it.href}>{it.cta}</Link>
+                </li>
+              ))}
+            </ul>
+            {moreItems.length > 0 && (
+              <details style={{ marginTop: 10 }}>
+                <summary>{moreItems.length} more, when you are ready</summary>
+                <ul className="steps">
+                  {moreItems.map((it, i) => (
+                    <li key={i}>
+                      <span className="tick" />
+                      <div className="step-body">{it.text}</div>
+                      <Link className="btn small" href={it.href}>{it.cta}</Link>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </>
         )}
       </div>
+
+      <Hint title="A thought for today">{noteOfTheDay()}</Hint>
 
       <div className="grid2">
         <div className="card">

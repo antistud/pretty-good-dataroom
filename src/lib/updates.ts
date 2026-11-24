@@ -19,7 +19,14 @@ export function updateDue(now = new Date()) {
   const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   const daysUntilDue = Math.round((dueDate.getTime() - today) / 86400_000);
   const update = q1<{ id: number; status: string }>("SELECT id, status FROM updates WHERE period = ?", period);
+  // A room created this month owes no update for last month. Its first one is due next month.
+  const born = q1<{ at: string | null }>("SELECT MIN(created_at) AS at FROM users")?.at;
+  const monthStart = `${periodOf(now)}-01`;
+  if (!update && born && born.slice(0, 10) >= monthStart) {
+    return { period, dueDate, daysUntilDue: 99, published: false, draftId: null, overdue: false, graceMonth: true };
+  }
   return {
+    graceMonth: false,
     period,
     dueDate,
     daysUntilDue,

@@ -2,7 +2,7 @@ import { LevelSelect, Field } from "@/components/ui";
 import { money } from "@/lib/format";
 import type { RoundRow } from "@/lib/rounds";
 
-/** Raise progress: wired money in green, committed and signed in blue, against the target. */
+/** Raise progress: wired money in the accent colour, committed and signed in green, against the target. */
 export function RaiseProgress({ totals, target }: { totals: { committed: number; signed: number; wired: number; total: number }; target: number }) {
   const base = Math.max(target, totals.total, 1);
   return (
