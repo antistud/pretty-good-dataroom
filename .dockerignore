@@ -1,0 +1,13 @@
+.git
+.github
+node_modules
+.next
+data
+.env
+.env.*
+!.env.example
+*.sqlite*
+*.md
+Dockerfile
+docker-compose.yml
+Caddyfile.example

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NavLink } from "@/components/NavLink";
 import { canSee, canSeeSection, requireUser } from "@/lib/auth";
 import { getSetting, q } from "@/lib/db";
 import { monthLabel, tierName } from "@/lib/format";
@@ -20,40 +21,41 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="brand">{company}</div>
         <div className="brand-sub">{me.isStaff ? "Founder workspace" : me.role === "supporter" ? "Supporter updates" : "Investor data room"}</div>
         <nav>
-          <Link href="/home">{me.isStaff ? "Today" : "Start here"}</Link>
+          <NavLink href="/home">{me.isStaff ? "Today" : "Start here"}</NavLink>
           {me.isStaff && (
             <>
+              <NavLink href="/guide">Founder guide</NavLink>
               <div className="nav-label">Fundraising</div>
-              <Link href="/pipeline">Pipeline</Link>
-              <Link href="/rounds">Rounds</Link>
-              <Link href="/requests">Requests</Link>
-              <Link href="/intros">Set Me Up</Link>
-              <Link href="/updates">Investor updates</Link>
+              <NavLink href="/pipeline">Pipeline</NavLink>
+              <NavLink href="/rounds">Rounds</NavLink>
+              <NavLink href="/requests">Requests</NavLink>
+              <NavLink href="/intros">Set Me Up</NavLink>
+              <NavLink href="/updates">Investor updates</NavLink>
               <div className="nav-label">The room</div>
             </>
           )}
-          {show("overview") && <Link href="/overview">Overview</Link>}
-          {!me.isStaff && show("round") && <Link href="/round">The round</Link>}
-          {show("team") && <Link href="/team">Team</Link>}
-          {show("documents") && <Link href="/documents">Documents</Link>}
-          {show("captable") && <Link href="/captable">Cap table &amp; SAFEs</Link>}
-          {show("financials") && <Link href="/financials">Financials</Link>}
+          {show("overview") && <NavLink href="/overview">Overview</NavLink>}
+          {!me.isStaff && show("round") && <NavLink href="/round">The round</NavLink>}
+          {show("team") && <NavLink href="/team">Team</NavLink>}
+          {show("documents") && <NavLink href="/documents">Documents</NavLink>}
+          {show("captable") && <NavLink href="/captable">Cap table &amp; SAFEs</NavLink>}
+          {show("financials") && <NavLink href="/financials">Financials</NavLink>}
           {pages.map((p) => (
-            <Link key={p.slug} href={`/p/${p.slug}`}>{p.title}</Link>
+            <NavLink key={p.slug} href={`/p/${p.slug}`}>{p.title}</NavLink>
           ))}
           {!me.isStaff && (
             <>
-              {show("updates") && <Link href="/updates">Updates</Link>}
-              {show("requests") && <Link href="/requests">Ask or request</Link>}
-              {show("intros") && <Link href="/intros">Set Me Up</Link>}
+              {show("updates") && <NavLink href="/updates">Updates</NavLink>}
+              {show("requests") && <NavLink href="/requests">Ask or request</NavLink>}
+              {show("intros") && <NavLink href="/intros">Set Me Up</NavLink>}
             </>
           )}
           {me.isStaff && (
             <>
               <div className="nav-label">Admin</div>
-              <Link href="/people">People &amp; access</Link>
-              <Link href="/activity">Activity</Link>
-              {me.role === "founder" && <Link href="/settings">Settings</Link>}
+              <NavLink href="/people">People &amp; access</NavLink>
+              <NavLink href="/activity">Activity</NavLink>
+              {me.role === "founder" && <NavLink href="/settings">Settings</NavLink>}
             </>
           )}
         </nav>
