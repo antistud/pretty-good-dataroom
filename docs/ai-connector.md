@@ -11,7 +11,17 @@ The data room contains no AI of its own and never sends your files anywhere. You
 3. In a new chat with the assistant, attach your documents and ask it to fill in your data room.
 4. Back in the room, review what it found. Tick what is right, untick what is wrong, and press **Add the ticked items to the room**.
 
-It can suggest the company profile and overview, the team, the cap table, a round and SAFEs.
+It can suggest the company profile and overview, the team, the cap table, a round and SAFEs, and say how each of your documents should be filed.
+
+## Getting the files themselves into the room
+
+An assistant cannot upload files. It does not hold the original file, only what it read from it, and a signed SAFE that arrived slightly altered would be worse than a missing one. So the assistant does the filing and you do the drop:
+
+1. The assistant tells the room what each file is: a clear name, the folder it belongs in, and which SAFE it goes with.
+2. You open **Documents** (or the bottom of the AI setup page) and drop the same files into the box, all at once.
+3. Each file is renamed, described, put in its folder and, for a signed SAFE, attached to that SAFE on the cap table. A "Just filed" list shows where everything went.
+
+Files the assistant did not describe are filed by their own names ("Certificate of incorporation.pdf" goes to company documents). Anything the room cannot place waits in a private **To sort** folder that only founders and team can see. Who can see a file always comes from its folder, never from the assistant.
 
 ## Adding the connector to your assistant
 

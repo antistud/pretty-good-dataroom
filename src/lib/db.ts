@@ -364,6 +364,20 @@ CREATE TABLE IF NOT EXISTS proposals (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Notes from a founder's AI assistant about files the founder is about to upload: what each one is and where it
+-- belongs. A note does nothing by itself; it is used when a file with that name is uploaded.
+CREATE TABLE IF NOT EXISTS doc_hints (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  filename TEXT NOT NULL,
+  title TEXT,
+  folder TEXT,
+  description TEXT,
+  safe_investor TEXT,
+  used INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- Manually ticked checklist items (onboarding steps, founder checklists).
 CREATE TABLE IF NOT EXISTS checks (
   scope TEXT NOT NULL,

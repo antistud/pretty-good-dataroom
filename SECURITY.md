@@ -80,6 +80,10 @@ to an AI assistant of their choice.
 - **First use is announced.** The owner gets a notification and an email the
   first time a key is used, and the caller's address is written to the
   activity log.
+- **It cannot upload files.** It can leave a note saying what a file is and
+  which folder it belongs in. The note is used only when a founder uploads a
+  file with that name, and never decides who can see it: that comes from the
+  folder. Files the room cannot place go to a founders-only folder.
 - **What it can write:** suggestions only. A suggestion is stored as pending
   and changes nothing until a founder reviews and applies it, item by item.
   This is deliberate: documents handed to an assistant can contain text that

@@ -9,8 +9,10 @@ import { flash } from "@/lib/flash";
 import { formLevel, formStr } from "@/lib/format";
 import { canWatermark, fileKind } from "@/lib/watermark";
 import { dismissMissing, restoreMissing } from "@/lib/missing-room";
+import { fileKey, planFiling, type FilingHint } from "@/lib/filing";
 
 const MAX_BYTES = 50 * 1024 * 1024;
+const UNSORTED = "To sort";
 
 function folderUrl(id: number | null) {
   return id ? `/documents?folder=${id}` : "/documents";
@@ -141,6 +143,79 @@ export async function uploadDocumentAction(form: FormData) {
   flash(back, `"${name}" uploaded.`);
 }
 
+/** Where a "still to upload" form may send the founder back to. */
+function backTo(form: FormData): string {
+  return (["/documents", "/fill", "/home"].includes(String(form.get("back"))) ? String(form.get("back")) : "/documents");
+}
+
+/**
+ * Several files at once. Each is named and put in a folder using the note a founder's AI assistant left for it, or
+ * failing that its own file name. Who can see it always comes from the folder, never from the assistant.
+ */
+export async function uploadManyAction(form: FormData) {
+  const me = await requireStaff();
+  const files = form.getAll("files").filter((f): f is File => f instanceof File && f.size > 0).slice(0, 30);
+  if (files.length === 0) flash("/documents", "Choose at least one file.", "error");
+  const big = files.find((f) => f.size > MAX_BYTES);
+  if (big) flash("/documents", `"${cleanFilename(big.name)}" is larger than 50 MB. Nothing was uploaded.`, "error");
+  let folders = allFolders();
+  // Where a file goes when neither a note nor its name says: the folder the founder had open, or else a private
+  // "To sort" folder that only founders and team can see, so nothing reaches investors by accident.
+  let fallback = folders.find((f) => f.id === Number(form.get("fallback_folder_id")))?.id;
+  if (!fallback) {
+    fallback = folders.find((f) => f.name === UNSORTED && f.parent_id == null)?.id;
+    if (!fallback) {
+      const pos = q1<{ p: number }>("SELECT IFNULL(MAX(position), 0) + 1 AS p FROM folders")!.p;
+      fallback = Number(run("INSERT INTO folders (name, description, min_level, position) VALUES (?,?,100,?)", UNSORTED, "Files the room could not place. Only founders and team can see this folder. Move each one where it belongs.", pos).lastInsertRowid);
+      folders = allFolders();
+    }
+  }
+  const hints = q<FilingHint>("SELECT id, filename, title, folder, description, safe_investor FROM doc_hints WHERE used = 0 ORDER BY id DESC");
+  const safes = q<{ id: number; investor_name: string; document_id: number | null }>("SELECT id, investor_name, document_id FROM safes WHERE status != 'committed'");
+
+  const ids: number[] = [];
+  let attached = 0;
+  let protectedPdfs = 0;
+  for (const f of files) {
+    const data = Buffer.from(await f.arrayBuffer());
+    const filename = cleanFilename(f.name);
+    const mime = (f.type || "application/octet-stream").slice(0, 100);
+    if (fileKind(mime, filename) === "pdf" && !(await canWatermark(data))) protectedPdfs++;
+    const plan = planFiling(filename, hints, folders, fallback);
+    const folder = folders.find((x) => x.id === plan.folderId)!;
+    const storageKey = await saveFile(data);
+    const docId = db.transaction(() => {
+      const d = run("INSERT INTO documents (folder_id, name, description, min_level, created_by) VALUES (?,?,?,?,?)", folder.id, plan.title.slice(0, 200), plan.description, folder.effective_level, me.id);
+      const id = Number(d.lastInsertRowid);
+      const v = run("INSERT INTO document_versions (document_id, filename, mime, size, storage_key, uploaded_by) VALUES (?,?,?,?,?,?)", id, filename, mime, data.length, storageKey, me.id);
+      run("UPDATE documents SET current_version_id = ? WHERE id = ?", Number(v.lastInsertRowid), id);
+      if (plan.hintId) run("UPDATE doc_hints SET used = 1 WHERE id = ?", plan.hintId);
+      return id;
+    })();
+    // A signed SAFE is attached to its entry on the cap table when exactly one unattached SAFE matches the investor.
+    const text = fileKey(`${plan.title} ${filename}`);
+    const wanted = plan.safeInvestor ? fileKey(plan.safeInvestor) : null;
+    const matches = safes.filter((s) => s.document_id == null && (wanted ? fileKey(s.investor_name) === wanted || fileKey(s.investor_name).includes(wanted) || wanted.includes(fileKey(s.investor_name)) : /\bsafe\b/.test(text) && fileKey(s.investor_name).split(" ").filter((w) => w.length >= 4).some((w) => text.includes(w))));
+    if (matches.length === 1) {
+      run("UPDATE safes SET document_id = ? WHERE id = ?", docId, matches[0].id);
+      matches[0].document_id = docId;
+      attached++;
+    }
+    logActivity(me, "doc.upload", "document", docId, `${plan.title} (filed ${plan.how === "assistant" ? "from an assistant's note" : plan.how === "name" ? "by its name" : "in the open folder"})`);
+    ids.push(docId);
+  }
+  if (!q1("SELECT 1 FROM documents WHERE folder_id = ?", fallback) && folders.find((f) => f.id === fallback)?.name === UNSORTED) run("DELETE FROM folders WHERE id = ? AND name = ?", fallback, UNSORTED);
+  const unsorted = folders.find((f) => f.id === fallback)?.name === UNSORTED ? (q1<{ n: number }>(`SELECT COUNT(*) AS n FROM documents WHERE folder_id = ? AND id IN (${ids.map(() => "?").join(",")})`, fallback, ...ids)?.n ?? 0) : 0;
+  const extra = `${attached ? ` ${attached} attached to ${attached === 1 ? "its SAFE" : "their SAFEs"} on the cap table.` : ""}${unsorted ? ` ${unsorted} could not be placed and ${unsorted === 1 ? "is" : "are"} in "To sort", where only you can see ${unsorted === 1 ? "it" : "them"}.` : ""}${protectedPdfs ? ` ${protectedPdfs} PDF${protectedPdfs === 1 ? " is" : "s are"} password-protected or damaged and cannot be shown to investors; upload unprotected copies.` : ""}`;
+  flash(`/documents?filed=${ids.join(",")}`, `${ids.length} document${ids.length === 1 ? "" : "s"} filed. Check where each one went below.${extra}`, protectedPdfs ? "error" : "ok");
+}
+
+export async function discardHintsAction(form: FormData) {
+  await requireStaff();
+  run("DELETE FROM doc_hints WHERE used = 0");
+  flash(backTo(form), "The assistant's filing notes were discarded. Nothing in the room changed.");
+}
+
 export async function newVersionAction(form: FormData) {
   const me = await requireStaff();
   const docId = Number(form.get("document_id"));
@@ -200,8 +275,6 @@ export async function deleteDocumentAction(form: FormData) {
   flash(folderUrl(doc!.folder_id), `"${doc!.name}" was deleted.`);
 }
 
-/** Where a "still to upload" form may send the founder back to. */
-const backTo = (form: FormData) => (["/documents", "/fill", "/home"].includes(String(form.get("back"))) ? String(form.get("back")) : "/documents");
 
 export async function dismissMissingAction(form: FormData) {
   const me = await requireStaff();

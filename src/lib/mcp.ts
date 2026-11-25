@@ -5,6 +5,7 @@ import { logActivity } from "./activity";
 import { parseAnswer } from "./docfill";
 import { notify } from "./notify";
 import { listHolders } from "./rounds";
+import { cleanHints, fileKey } from "./filing";
 
 /**
  * A small MCP server, so a founder can connect the AI assistant they already
@@ -64,7 +65,8 @@ const instructions = (canRead: boolean) =>
   (canRead ? "Call get_room first to see what is already there. Then call" : "Call") +
   ` propose_changes with only what the documents actually say: never guess or fill gaps, use plain numbers for amounts and share counts, and list anything missing, unsigned or contradictory under "unsure". ` +
   (canRead ? "" : "This connection can send suggestions but cannot read the room; the data room itself flags anything that is already there, so send everything the documents support. ") +
-  `Your proposal is a suggestion. The founder reviews and applies it inside the data room; tell them to open "From your documents" there when you are done.`;
+  `Your proposal is a suggestion. The founder reviews and applies it inside the data room; tell them to open "From your documents" there when you are done. ` +
+  `Then call file_documents with every file they shared, so that when they upload the files to the room each one is named and filed correctly. You cannot upload files yourself.`;
 
 const nullable = (type: string, description: string) => ({ type: [type, "null"], description });
 const PROPOSE_SCHEMA = {
@@ -140,7 +142,41 @@ const TOOLS = [
     inputSchema: PROPOSE_SCHEMA,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
   },
+  {
+    name: "file_documents",
+    title: "Say how each document should be filed",
+    description:
+      "You cannot upload files to the data room; the founder does that. This tells the room what each file is, so that when the founder uploads it, it is named, described and put in the right folder automatically. Call it once with every document the founder shared with you. Use the exact file names.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["documents"],
+      properties: {
+        documents: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["filename"],
+            properties: {
+              filename: { type: "string", description: "The file's name exactly as the founder shared it, with its extension." },
+              title: nullable("string", "A clear name for the room, for example 'Signed SAFE - Oak Ventures' or 'Certificate of incorporation'."),
+              folder: nullable("string", "Which folder it belongs in. See the folder list in this tool's description."),
+              description: nullable("string", "One line on what it is and why it matters. Mention if it is unsigned or a draft."),
+              safe_investor: nullable("string", "Only for a signed SAFE: the investor's name, so the file can be attached to that SAFE on the cap table."),
+            },
+          },
+        },
+      },
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  },
 ];
+
+/** The tools on offer to a connector. Folder names are added so the assistant can pick a real one; they are not confidential. */
+function toolsFor(user: McpUser) {
+  const folders = q<{ name: string }>("SELECT name FROM folders WHERE parent_id IS NULL ORDER BY position, id").map((f) => f.name.slice(0, 60)).slice(0, 30);
+  return TOOLS.filter((t) => user.canRead || t.name !== "get_room").map((t) => (t.name === "file_documents" ? { ...t, description: `${t.description} Folders: ${folders.join("; ")}.` } : t));
+}
 
 function roomSnapshot() {
   const company = {
@@ -182,6 +218,18 @@ function callTool(user: McpUser, name: string, args: unknown): { content: { type
     logActivity({ id: user.id, orgId: null }, "proposal.create", undefined, undefined, "from a connected AI assistant");
     const counts = [answer.company && "company profile", answer.team.length && `${answer.team.length} team`, answer.holders.length && `${answer.holders.length} shareholders`, answer.round && "a round", answer.safes.length && `${answer.safes.length} SAFEs`].filter(Boolean).join(", ");
     return text(`Saved as a suggestion (${counts}). Nothing is live yet. Tell the founder to open the data room, go to The room → From your documents, and review it: ${(process.env.APP_URL || "").replace(/\/$/, "")}/fill`);
+  }
+  if (name === "file_documents") {
+    const hints = cleanHints(args);
+    if (hints.length === 0) return text("Nothing usable was provided. Send { documents: [{ filename, title, folder, description }] } with the exact file names.", true);
+    // A newer note about the same file replaces the older one; notes are capped so a runaway assistant cannot fill the table.
+    const pending = q<{ id: number; filename: string }>("SELECT id, filename FROM doc_hints WHERE user_id = ? AND used = 0", user.id);
+    for (const h of hints) for (const old of pending) if (fileKey(old.filename) === fileKey(h.filename)) run("DELETE FROM doc_hints WHERE id = ?", old.id);
+    const room = 100 - (q1<{ n: number }>("SELECT COUNT(*) AS n FROM doc_hints WHERE user_id = ? AND used = 0", user.id)?.n ?? 0);
+    if (room <= 0) return text("There are already 100 filing notes waiting. Ask the founder to upload those files, or discard the notes, in the data room first.", true);
+    for (const h of hints.slice(0, room)) run("INSERT INTO doc_hints (user_id, filename, title, folder, description, safe_investor) VALUES (?,?,?,?,?,?)", user.id, h.filename, h.title, h.folder, h.description, h.safe_investor);
+    logActivity({ id: user.id, orgId: null }, "documents.filing_notes", undefined, undefined, `${Math.min(hints.length, room)} from a connected AI assistant`);
+    return text(`Noted for ${Math.min(hints.length, room)} file${hints.length === 1 ? "" : "s"}. The files themselves are not in the room yet. Tell the founder to open Documents in the data room and drop those same files into the box at the top; each one will be named and filed as you described: ${(process.env.APP_URL || "").replace(/\/$/, "")}/documents`);
   }
   return null;
 }
@@ -235,7 +283,7 @@ export function handleMessage(user: McpUser, msg: Rpc, headers: Record<string, s
     case "ping":
       return ok({});
     case "tools/list":
-      return ok({ tools: user.canRead ? TOOLS : TOOLS.filter((t) => t.name !== "get_room") });
+      return ok({ tools: toolsFor(user) });
     case "tools/call": {
       const name = typeof msg.params?.name === "string" ? msg.params.name : "";
       const result = callTool(user, name, msg.params?.arguments);

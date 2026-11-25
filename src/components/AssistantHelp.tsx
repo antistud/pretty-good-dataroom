@@ -20,7 +20,7 @@ const GUIDES: Guide[] = [
     notes: [
       "Safer: use the short address instead, and under Request headers add a header named Authorization with the value Bearer followed by a space and your key.",
       "Free accounts can add one custom connector. On Team and Enterprise plans an owner adds it for everyone under Organization settings.",
-      "Claude asks before it sends anything. Allow the “suggest details” tool.",
+      "Claude asks before it sends anything. Allow both tools: suggesting details, and saying how to file documents.",
     ],
     help: { label: "Claude's own instructions", url: "https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp" },
   },

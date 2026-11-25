@@ -6,6 +6,7 @@ import { logView } from "@/lib/activity";
 import { fileSize, fmtDate, levelName } from "@/lib/format";
 import { Field, Flash, Hint, LevelSelect, PageHead } from "@/components/ui";
 import { Icon } from "@/components/Icon";
+import { FilingBox } from "@/components/FilingBox";
 import { MissingDocs } from "@/components/MissingDocs";
 import { createFolderAction, deleteFolderAction, updateFolderAction, uploadDocumentAction } from "./actions";
 
@@ -22,6 +23,9 @@ export default async function Documents({ searchParams }: { searchParams: Promis
   const here = current ? docs.filter((d) => d.folder_id === current.id) : [];
   const children = current ? folders.filter((f) => f.parent_id === current.id) : [];
   const parent = current ? folders.find((f) => f.id === current.parent_id) : undefined;
+  // Documents filed a moment ago by the drop box, so the founder can check where each one went.
+  const filedIds = String(sp.filed ?? "").split(",").map(Number).filter((n) => Number.isInteger(n) && n > 0).slice(0, 30);
+  const filed = me.isStaff ? docs.filter((d) => filedIds.includes(d.id)) : [];
 
   // Folders that `current` could be moved into: anything that is not itself or beneath it.
   const below = new Set<number>(current ? [current.id] : []);
@@ -53,6 +57,20 @@ export default async function Documents({ searchParams }: { searchParams: Promis
         <Hint title="What to do here">Pick a folder and click a document to read it. Each page is marked with your email, and the founders can see what you have viewed.</Hint>
       )}
 
+      {me.isStaff && filed.length > 0 && (
+        <div className="card callout" id="filed">
+          <h2>Just filed</h2>
+          <ul className="quiet-list">
+            {filed.map((d) => (
+              <li key={d.id} className="spread">
+                <span><Link href={`/documents/${d.id}`}>{d.name}</Link> <span className="muted">→ <Link href={`/documents?folder=${d.folder_id}`}>{folders.find((f) => f.id === d.folder_id)?.name}</Link> · {levelName(d.effective_level)}</span></span>
+                <Link className="small" href={`/documents/${d.id}`}>Move or rename</Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {me.isStaff && <FilingBox back="/documents" fallbackFolderId={sp.folder ? current?.id : undefined} />}
       {me.isStaff && <MissingDocs back="/documents" />}
 
       {folders.length === 0 ? (
