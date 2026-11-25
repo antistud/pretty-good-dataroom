@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
-export type Tab = { label: string; href: string; icon: "home" | "people" | "doc" | "mail" | "chat" | "more" };
+export type Tab = { label: string; href: string; icon: "home" | "people" | "doc" | "mail" | "chat" | "more"; match?: string[] };
 
 const ICONS: Record<Tab["icon"], string> = {
   home: "M3 11.5 12 4l9 7.5M5.5 10v9h13v-9",
@@ -51,9 +51,14 @@ export function Chrome({ tabs, unread }: { tabs: Tab[]; unread: number }) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        document.querySelector<HTMLDetailsElement>("details.acct[open]")?.removeAttribute("open");
+      }
     };
     const onClick = (e: MouseEvent) => {
+      const acct = document.querySelector<HTMLDetailsElement>("details.acct[open]");
+      if (acct && (!acct.contains(e.target as Node) || (e.target as HTMLElement).closest("a"))) acct.open = false;
       if ((e.target as HTMLElement).closest?.("[data-menu-toggle]")) {
         setOpen((o) => !o);
         return;
@@ -112,7 +117,7 @@ export function Chrome({ tabs, unread }: { tabs: Tab[]; unread: number }) {
     {open && <div className="menu-veil" onClick={() => setOpen(false)} />}
     <nav className="tabbar" aria-label="Main">
       {tabs.map((t) => {
-        const active = path === t.href || path.startsWith(t.href + "/");
+        const active = (t.match ?? [t.href]).some((h) => path === h || path.startsWith(h + "/"));
         return (
           <Link key={t.href} href={t.href} className={active && !open ? "active" : ""}>
             <Icon name={t.icon} />

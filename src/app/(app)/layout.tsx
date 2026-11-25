@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { NavLink } from "@/components/NavLink";
+import { FullMenu, PrimaryNav, SubNav, type NavGroup, type NavItem } from "@/components/Nav";
 import { Palette, type PaletteItem } from "@/components/Palette";
 import { Cheer } from "@/components/Cheer";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
@@ -21,45 +21,77 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const due = me.isStaff ? updateDue() : null;
   const show = (s: Parameters<typeof canSeeSection>[1]) => canSeeSection(me, s);
 
-  const jump: PaletteItem[] = [
-    { label: me.isStaff ? "Today" : "Home", href: "/home", kind: "Go to" },
-    ...(me.isStaff
+  const on = <T,>(cond: boolean, value: T): T[] => (cond ? [value] : []);
+  const custom: NavItem[] = pages.map((p) => ({ label: p.title, href: `/p/${p.slug}` }));
+
+  // The whole map of the app, in one place. Groups with nothing visible to this person are dropped.
+  const groups: NavGroup[] = (
+    me.isStaff
       ? [
-          { label: "Founder guide", href: "/guide", kind: "Go to" },
-          { label: "Investors", href: "/pipeline", kind: "Go to" },
-          { label: "Rounds", href: "/rounds", kind: "Go to" },
-          { label: "People & access", href: "/people", kind: "Go to" },
-          { label: "Activity", href: "/activity", kind: "Go to" },
+          { key: "today", label: "Today", items: [{ label: "Today", href: "/home" }, { label: "Founder guide", href: "/guide" }] },
+          {
+            key: "investors",
+            label: "Investors",
+            items: [
+              { label: "Everyone", href: "/pipeline" },
+              { label: "Rounds", href: "/rounds" },
+              { label: "Requests", href: "/requests" },
+              { label: "Introductions", href: "/intros" },
+              { label: "Access", href: "/people" },
+              { label: "Activity", href: "/activity" },
+            ],
+          },
+          {
+            key: "room",
+            label: "The room",
+            items: [
+              ...on(show("overview"), { label: "Overview", href: "/overview" }),
+              ...on(show("team"), { label: "Team", href: "/team" }),
+              ...on(show("documents"), { label: "Documents", href: "/documents" }),
+              ...on(show("captable"), { label: "Cap table", href: "/captable" }),
+              ...on(show("financials"), { label: "Financials", href: "/financials" }),
+              ...custom,
+            ],
+          },
+          { key: "updates", label: "Updates", items: [{ label: "Updates", href: "/updates" }] },
         ]
-      : []),
-    ...(show("overview") ? [{ label: "Overview", href: "/overview", kind: "Go to" }] : []),
-    ...(!me.isStaff && show("round") ? [{ label: "The round", href: "/round", kind: "Go to" }] : []),
-    ...(show("team") ? [{ label: "Team", href: "/team", kind: "Go to" }] : []),
-    ...(show("documents") ? [{ label: "Documents", href: "/documents", kind: "Go to" }] : []),
-    ...(show("captable") ? [{ label: "Cap table & SAFEs", href: "/captable", kind: "Go to" }] : []),
-    ...(show("financials") ? [{ label: "Financials", href: "/financials", kind: "Go to" }] : []),
-    ...(show("updates") ? [{ label: me.isStaff ? "Investor updates" : "Updates", href: "/updates", kind: "Go to" }] : []),
-    ...(show("requests") ? [{ label: me.isStaff ? "Requests" : "Ask or request", href: "/requests", kind: "Go to" }] : []),
-    ...(show("intros") ? [{ label: "Set Me Up", href: "/intros", kind: "Go to" }] : []),
-    ...(me.role === "founder" ? [{ label: "Settings", href: "/settings", kind: "Go to" }] : []),
+      : [
+          { key: "home", label: "Home", items: [{ label: "Home", href: "/home" }] },
+          {
+            key: "company",
+            label: "The company",
+            items: [
+              ...on(show("overview"), { label: "Overview", href: "/overview" }),
+              ...on(show("round"), { label: "The round", href: "/round" }),
+              ...on(show("team"), { label: "Team", href: "/team" }),
+              ...custom,
+            ],
+          },
+          {
+            key: "numbers",
+            label: show("captable") && show("financials") ? "The numbers" : show("captable") ? "Cap table" : "Financials",
+            items: [...on(show("captable"), { label: "Cap table", href: "/captable" }), ...on(show("financials"), { label: "Financials", href: "/financials" })],
+          },
+          { key: "documents", label: "Documents", items: on(show("documents"), { label: "Documents", href: "/documents" }) },
+          { key: "updates", label: "Updates", items: on(show("updates"), { label: "Updates", href: "/updates" }) },
+          { key: "intros", label: "Introductions", items: on(show("intros"), { label: "Introductions", href: "/intros" }) },
+        ]
+  ).filter((g) => g.items.length > 0);
+
+  const canAsk = !me.isStaff && show("requests");
+  const jump: PaletteItem[] = [
+    ...groups.flatMap((g) => g.items.map((i) => ({ label: g.items.length > 1 && i.label !== g.label ? `${g.label}: ${i.label}` : g.label, href: i.href, kind: "Go to" }))),
+    ...on(canAsk, { label: "Ask the founders", href: "/requests", kind: "Go to" }),
     { label: "What's new", href: "/notifications", kind: "Go to" },
+    ...on(me.role === "founder", { label: "Settings", href: "/settings", kind: "Go to" }),
     { label: "Account", href: "/account", kind: "Go to" },
   ];
 
   const unread = unreadCount(me.id);
-  const tabs: Tab[] = me.isStaff
-    ? [
-        { label: "Today", href: "/home", icon: "home" },
-        { label: "Investors", href: "/pipeline", icon: "people" },
-        { label: "Requests", href: "/requests", icon: "chat" },
-        { label: "Updates", href: "/updates", icon: "mail" },
-      ]
-    : [
-        { label: "Home", href: "/home", icon: "home" },
-        ...(show("documents") ? [{ label: "Documents", href: "/documents", icon: "doc" } as Tab] : []),
-        ...(show("updates") ? [{ label: "Updates", href: "/updates", icon: "mail" } as Tab] : []),
-        ...(show("requests") ? [{ label: "Ask", href: "/requests", icon: "chat" } as Tab] : show("intros") ? [{ label: "Help", href: "/intros", icon: "people" } as Tab] : []),
-      ];
+  const ICON: Record<string, Tab["icon"]> = { today: "home", home: "home", investors: "people", room: "doc", documents: "doc", company: "doc", numbers: "doc", updates: "mail", intros: "people" };
+  const tabs: Tab[] = groups.slice(0, 4).map((g) => ({ label: g.label.replace(/^The /, "").replace(/^./, (c) => c.toUpperCase()), href: g.items[0].href, icon: ICON[g.key] ?? "doc", match: g.items.map((i) => i.href) }));
+  const initials = me.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+  const who = `${me.orgName ? `${me.orgName} · ` : ""}${me.isStaff ? (me.role === "founder" ? "Founder" : "Team") : tierName(me.level)}`;
 
   return (
     <div className="shell">
@@ -67,72 +99,45 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Suspense fallback={null}><Chrome tabs={tabs} unread={unread} /></Suspense>
       <header className="topbar">
         <Link className="brand" href="/home">{company}</Link>
-        <nav className="topnav" aria-label="Main">
-          {tabs.map((t) => <NavLink key={t.href} href={t.href}>{t.label}</NavLink>)}
-          {me.isStaff && show("documents") && <NavLink href="/documents">Documents</NavLink>}
-        </nav>
+        <PrimaryNav groups={groups} />
         <div className="topright">
+          {canAsk && <Link className="btn small primary ask" href="/requests">Ask the founders</Link>}
           <Palette nav={jump} />
           <Link href="/notifications" className="whatsnew" aria-label={`What's new${unread ? `, ${unread} unread` : ""}`}>
             What&apos;s new{unread > 0 && <span className="count">{unread}</span>}
           </Link>
-          <button type="button" className="menu-btn" data-menu-toggle aria-label="Open menu">Menu</button>
+          <details className="acct">
+            <summary aria-label="Your account"><span className="avatar">{initials}</span></summary>
+            <div className="acct-pop">
+              <div className="acct-who"><strong>{me.name}</strong><span className="muted small">{who}</span></div>
+              <Link href="/account">Account and email</Link>
+              {me.role === "founder" && <Link href="/settings">Settings</Link>}
+              <ThemeSwitch />
+              <form action={logoutAction}><button className="linkbtn">Sign out</button></form>
+            </div>
+          </details>
         </div>
       </header>
+      <SubNav groups={groups} />
+
+      {/* The phone's "More" screen: the same map, plus the account. */}
       <aside className="side" aria-label="Menu">
-        <button type="button" className="menu-close linkbtn" data-menu-toggle>Close</button>
-        <div className="brand">{company}</div>
-        <div className="brand-sub">{me.isStaff ? "Founder workspace" : me.role === "supporter" ? "Supporter updates" : "Investor data room"}</div>
+        <div className="brand-sub">{who}</div>
+        <FullMenu groups={groups} />
         <nav>
-          <NavLink href="/home">{me.isStaff ? "Today" : "Home"}</NavLink>
-          <NavLink href="/notifications"><span className="bell" style={{ flex: 1 }}>What&apos;s new {unread > 0 && <span className="count">{unread}</span>}</span></NavLink>
-          {me.isStaff && (
-            <>
-              <NavLink href="/guide">Founder guide</NavLink>
-              <div className="nav-label">Fundraising</div>
-              <NavLink href="/pipeline">Investors</NavLink>
-              <NavLink href="/rounds">Rounds</NavLink>
-              <NavLink href="/requests">Requests</NavLink>
-              <NavLink href="/intros">Set Me Up</NavLink>
-              <NavLink href="/updates">Investor updates</NavLink>
-              <div className="nav-label">The room</div>
-            </>
-          )}
-          {show("overview") && <NavLink href="/overview">Overview</NavLink>}
-          {!me.isStaff && show("round") && <NavLink href="/round">The round</NavLink>}
-          {show("team") && <NavLink href="/team">Team</NavLink>}
-          {show("documents") && <NavLink href="/documents">Documents</NavLink>}
-          {show("captable") && <NavLink href="/captable">Cap table &amp; SAFEs</NavLink>}
-          {show("financials") && <NavLink href="/financials">Financials</NavLink>}
-          {pages.map((p) => (
-            <NavLink key={p.slug} href={`/p/${p.slug}`}>{p.title}</NavLink>
-          ))}
-          {!me.isStaff && (
-            <>
-              {show("updates") && <NavLink href="/updates">Updates</NavLink>}
-              {show("requests") && <NavLink href="/requests">Ask or request</NavLink>}
-              {show("intros") && <NavLink href="/intros">Set Me Up</NavLink>}
-            </>
-          )}
-          {me.isStaff && (
-            <>
-              <div className="nav-label">Admin</div>
-              <NavLink href="/people">People &amp; access</NavLink>
-              <NavLink href="/activity">Activity</NavLink>
-              {me.role === "founder" && <NavLink href="/settings">Settings</NavLink>}
-            </>
-          )}
+          <div className="nav-label">You</div>
+          {canAsk && <Link href="/requests">Ask the founders</Link>}
+          <Link href="/notifications">What&apos;s new{unread > 0 ? ` (${unread})` : ""}</Link>
+          <Link href="/account">Account and email</Link>
+          {me.role === "founder" && <Link href="/settings">Settings</Link>}
         </nav>
         <div className="me">
           <div><strong>{me.name}</strong></div>
-          <div className="muted">{me.orgName ? `${me.orgName} · ` : ""}{me.isStaff ? me.role : tierName(me.level)}</div>
-          <div className="row" style={{ marginTop: 6 }}>
-            <Link href="/account">Account</Link>
-            <form action={logoutAction}><button className="linkbtn">Sign out</button></form>
-          </div>
           <ThemeSwitch />
+          <form action={logoutAction} style={{ marginTop: 10 }}><button className="linkbtn">Sign out</button></form>
         </div>
       </aside>
+
       <div>
         {due && !due.published && due.daysUntilDue <= 5 && (
           <div className="banner">
