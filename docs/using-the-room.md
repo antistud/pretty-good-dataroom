@@ -68,6 +68,8 @@ Investors are never given a checklist. Their home page shows a letter from you, 
 
 ## Optional extras
 
+- **Your logo.** Under **Settings → Company**, upload a PNG, JPEG or WebP. It appears in the header, on the sign-in page and at the top of emails. Tick the box if the logo already spells out the company name.
+- **Team photos.** Add one per person on the Team page.
 - **Authenticator app.** Under **Account**, add a second sign-in step. Worth doing for founders.
 - **Agreement before entering.** Under **Settings**, ask investors and supporters to accept a confidentiality text first. This is a click-through acknowledgement, not a signed contract.
 - **Printing and export.** Every investor-facing page prints cleanly or saves as PDF. Levels allowed to download can also export the cap table as CSV and all documents as one zip.

@@ -49,6 +49,11 @@ export type MailOptions = {
 /** The shared look of every email: paper background, serif headline, one clear button. */
 export function renderEmail(bodyHtml: string, cta?: { label: string; url: string }, opts: MailOptions = {}): string {
   const company = escapeHtml(getSetting("company_name"));
+  // The logo, when there is one. The company name stays as text beside it unless the logo already spells it out,
+  // and is always the image's alt text, because many mail apps hide pictures until asked.
+  const logoKey = getSetting("logo_key");
+  const logo = logoKey ? `<img src="${baseUrl()}/api/logo?v=${escapeHtml(logoKey.slice(0, 8))}" alt="${company}" height="32" style="height:32px;width:auto;max-width:220px;border:0;vertical-align:middle">` : "";
+  const masthead = logo ? (getSetting("logo_has_name") === "1" ? logo : `${logo}<span style="vertical-align:middle;padding-left:10px">${company}</span>`) : company;
   const button = cta
     ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:26px 0 6px"><tr><td style="background:#1b1b19;border-radius:10px"><a href="${escapeHtml(cta.url)}" style="display:inline-block;padding:12px 22px;color:#ffffff;font:600 15px system-ui,-apple-system,Segoe UI,sans-serif;text-decoration:none">${escapeHtml(cta.label)}</a></td></tr></table>`
     : "";
@@ -59,7 +64,7 @@ export function renderEmail(bodyHtml: string, cta?: { label: string; url: string
 <div style="display:none;max-height:0;overflow:hidden;opacity:0">${escapeHtml(opts.preview ?? "")}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8f7f4"><tr><td align="center" style="padding:28px 14px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:580px">
-<tr><td style="font:500 19px Georgia,'Iowan Old Style',serif;color:#1b1b19;padding:0 4px 14px">${company}</td></tr>
+<tr><td style="font:500 19px Georgia,'Iowan Old Style',serif;color:#1b1b19;padding:0 4px 14px">${masthead}</td></tr>
 <tr><td style="background:#ffffff;border:1px solid #e4e1d9;border-radius:14px;padding:28px 28px 24px;font:16px/1.65 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1b1b19">${bodyHtml}${button}</td></tr>
 <tr><td style="font:12.5px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;color:#7a7164;padding:16px 6px 0">${footer}</td></tr>
 </table></td></tr></table></body></html>`;

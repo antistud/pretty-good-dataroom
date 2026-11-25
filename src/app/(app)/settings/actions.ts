@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { q, q1, run, setSetting, getSetting } from "@/lib/db";
 import { requireFounder } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
@@ -7,6 +8,8 @@ import { flash } from "@/lib/flash";
 import { AUTOMATIONS } from "@/lib/automations";
 import { formLevel, formStr } from "@/lib/format";
 import { mailEnabled, sendMail } from "@/lib/mail";
+import { deleteFile, saveFile } from "@/lib/storage";
+import { imageType } from "@/lib/images";
 
 const SECTIONS = ["overview", "team", "updates", "intros", "round", "documents", "requests", "captable", "financials"] as const;
 
@@ -17,7 +20,43 @@ export async function saveCompanyAction(form: FormData) {
   setSetting("company_name", name);
   setSetting("tagline", formStr(form.get("tagline"), 200));
   logActivity(me, "settings.company", undefined, undefined, name);
+  // The header is shared by every page, so it has to be redrawn for the change to show.
+  revalidatePath("/", "layout");
   flash("/settings", "Company details saved.");
+}
+
+/** Uploads or replaces the company logo, shown in the header, on the sign-in page and at the top of emails. */
+export async function saveLogoAction(form: FormData) {
+  const me = await requireFounder();
+  const file = form.get("logo");
+  if (file instanceof File && file.size > 0) {
+    if (file.size > 1024 * 1024) flash("/settings", "That logo is larger than 1 MB. Export a smaller one; 400 pixels wide is plenty.", "error");
+    const data = Buffer.from(await file.arrayBuffer());
+    const mime = imageType(data);
+    if (!mime) flash("/settings", "Use a PNG, JPEG or WebP logo. (SVG is not accepted; export it as a PNG.)", "error");
+    const old = getSetting("logo_key");
+    setSetting("logo_key", await saveFile(data));
+    setSetting("logo_mime", mime!);
+    if (old) await deleteFile(old).catch(() => {});
+    logActivity(me, "settings.logo", undefined, undefined, "uploaded");
+  } else if (!getSetting("logo_key")) flash("/settings", "Choose a logo file first.", "error");
+  setSetting("logo_has_name", form.get("logo_has_name") === "on" ? "1" : "0");
+  // The header is shared by every page, so it has to be redrawn for the change to show.
+  revalidatePath("/", "layout");
+  flash("/settings", "Logo saved.");
+}
+
+export async function removeLogoAction() {
+  const me = await requireFounder();
+  const old = getSetting("logo_key");
+  setSetting("logo_key", "");
+  setSetting("logo_mime", "");
+  setSetting("logo_has_name", "0");
+  if (old) await deleteFile(old).catch(() => {});
+  logActivity(me, "settings.logo", undefined, undefined, "removed");
+  // The header is shared by every page, so it has to be redrawn for the change to show.
+  revalidatePath("/", "layout");
+  flash("/settings", "Logo removed. The company name is shown instead.");
 }
 
 export async function saveTiersAction(form: FormData) {

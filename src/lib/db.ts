@@ -457,6 +457,9 @@ export function run(sql: string, ...params: unknown[]) {
 
 const SETTING_DEFAULTS: Record<string, string> = {
   company_name: "Your Company",
+  logo_key: "",
+  logo_mime: "",
+  logo_has_name: "0",
   tagline: "",
   overview_md: "",
   update_due_day: "5",

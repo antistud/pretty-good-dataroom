@@ -4,7 +4,7 @@ import { ago, levelName, levelOptions } from "@/lib/format";
 import { mailEnabled } from "@/lib/mail";
 import { Field, Flash, Hint, LevelSelect, PageHead } from "@/components/ui";
 import {
-  createPageAction, deletePageAction, saveCompanyAction, saveNdaAction, saveSectionsAction, saveTiersAction,
+  createPageAction, deletePageAction, removeLogoAction, saveCompanyAction, saveLogoAction, saveNdaAction, saveSectionsAction, saveTiersAction,
   saveUpdateDayAction, testEmailAction, updatePageAction, saveWelcomeAction, saveAutomationsAction } from "./actions";
 import { AUTOMATIONS, automationOn } from "@/lib/automations";
 
@@ -60,6 +60,20 @@ export default async function Settings({ searchParams }: { searchParams: Promise
             <Field label="Company name"><input name="company_name" required maxLength={120} defaultValue={getSetting("company_name")} /></Field>
             <Field label="One-line description"><input name="tagline" maxLength={200} defaultValue={getSetting("tagline")} /></Field>
             <button className="btn primary">Save</button>
+          </form>
+          <hr />
+          <h3>Logo</h3>
+          {getSetting("logo_key") && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <p><img className="logo-preview" src={`/api/logo?v=${getSetting("logo_key").slice(0, 8)}`} alt="Current logo" /></p>
+          )}
+          <form action={saveLogoAction}>
+            <Field label={getSetting("logo_key") ? "Replace it" : "Upload a logo"} hint="PNG, JPEG or WebP, up to 1 MB. Shown in the header, on the sign-in page and in emails."><input type="file" name="logo" accept="image/png,image/jpeg,image/webp" /></Field>
+            <label className="row" style={{ marginBottom: 12 }}><input type="checkbox" name="logo_has_name" defaultChecked={getSetting("logo_has_name") === "1"} /> The logo already includes the company name</label>
+            <div className="row">
+              <button className="btn">Save logo</button>
+              {getSetting("logo_key") && <button className="linkbtn small danger" formAction={removeLogoAction} formNoValidate>Remove logo</button>}
+            </div>
           </form>
         </div>
         <div className="card">

@@ -20,6 +20,7 @@ function cssString(text: string): string {
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const me = await requireUser();
   const company = getSetting("company_name");
+  const logoKey = getSetting("logo_key");
   const pages = q<{ slug: string; title: string; min_level: number }>("SELECT slug, title, min_level FROM pages ORDER BY position, id").filter((p) =>
     canSee(me, p.min_level),
   );
@@ -106,7 +107,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Suspense fallback={null}><Cheer /></Suspense>
       <Suspense fallback={null}><Chrome tabs={tabs} unread={unread} /></Suspense>
       <header className="topbar">
-        <Link className="brand" href="/home">{company}</Link>
+        <Link className="brand" href="/home" aria-label={company}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {logoKey && <img className="brand-logo" src={`/api/logo?v=${logoKey.slice(0, 8)}`} alt="" />}
+          {!(logoKey && getSetting("logo_has_name") === "1") && <span>{company}</span>}
+        </Link>
         <PrimaryNav groups={groups} />
         <div className="topright">
           {canAsk && <Link className="btn small primary ask" href="/requests">Ask the founders</Link>}

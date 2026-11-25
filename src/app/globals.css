@@ -669,3 +669,9 @@ details.hint > div { border-left: 2px solid var(--accent); padding: 2px 0 2px 16
   .funnel li { grid-template-columns: 88px 1fr 84px; }
 }
 @media print { .splitbar, .meter > div, .funnel-bar, .columns .col > div, .main > * { animation: none !important; } .splitbar .seg, .legend i, .meter > div, .funnel-bar, .columns .col > div { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
+
+/* ---------- Company logo ---------- */
+.topbar .brand { display: inline-flex; align-items: center; gap: 10px; }
+.brand-logo { height: 28px; width: auto; max-width: 160px; object-fit: contain; display: block; }
+.auth-logo { height: 44px; width: auto; max-width: 240px; object-fit: contain; }
+.logo-preview { height: 44px; width: auto; max-width: 240px; object-fit: contain; background: var(--sunken); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; box-sizing: content-box; }

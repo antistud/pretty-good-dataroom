@@ -44,6 +44,10 @@ an attacker could do with it. You will get a reply there.
   served through an authenticated, permission-checked route. PDFs are
   watermarked with the viewer's email and the time. Downloads are off unless a
   tier is allowed them.
+- **Pictures.** Team photos and the company logo must be PNG, JPEG or WebP,
+  checked by content; SVG is refused. Team photos are served only to people
+  who may see the team page. The logo is public by design: it appears on the
+  sign-in page and in emails, alongside the company name already shown there.
 - **Audit log.** Sign-ins, views, downloads and admin changes are recorded.
 - **User-written text** (overview, updates, pages) is rendered through a small
   markdown subset with all HTML escaped.
