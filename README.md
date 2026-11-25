@@ -30,7 +30,7 @@ It does two jobs:
 | Phone | A bottom tab bar, stacked tables, large touch targets, and it can be added to the home screen |
 | Export and print | Every investor-facing page prints cleanly or saves as PDF, stamped with who it was prepared for. A one-page summary of everything a person can see. Cap table, SAFEs and financials as CSV, and all documents as one zip, for tiers allowed to download |
 | Sample company | One click loads a fictional raise into an empty room so you can look around; one click removes exactly what it added |
-| Security | Invite-only, scrypt password hashes, optional two-step sign-in, optional NDA gate, activity and audit log |
+| Security | Invite-only. Sign-in by a six-digit code sent to your email, with no passwords to choose, leak or reset. Optional authenticator-app second step, optional NDA gate, activity and audit log |
 
 ## Run it
 
@@ -40,7 +40,9 @@ On a fresh Linux server whose DNS name points at it, one command:
 curl -fsSL https://raw.githubusercontent.com/antistud/pretty-good-dataroom/main/install.sh | sudo bash -s -- room.example.com
 ```
 
-It installs Docker if needed, starts the app behind HTTPS, schedules a nightly backup, and prints your address and a setup token. Open the address, enter the token, and create the first founder account.
+It installs Docker if needed, asks for your email (SMTP) settings, starts the app behind HTTPS, schedules a nightly backup, and prints your address and a setup token. Open the address, enter the token, and create the first founder account.
+
+**Email is required.** People sign in with a code sent by email, so the room stays closed until it can send mail. Have SMTP details from any email service ready (Resend, Postmark, SendGrid, Amazon SES, Google Workspace…). If email ever breaks and you are locked out, `sudo /opt/dataroom/install.sh code you@example.com` issues a sign-in code on the server.
 
 Run `sudo /opt/dataroom/install.sh` again at any time to update; settings and data are kept. Step-by-step for DigitalOcean: [docs/digitalocean.md](docs/digitalocean.md).
 
@@ -50,7 +52,7 @@ Settings live in `/opt/dataroom/.env`:
 |---|---|
 | `DOMAIN` | The address of the room, e.g. `room.example.com` |
 | `SETUP_TOKEN` | Asked for once on the setup screen, so a stranger cannot claim a fresh install |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Optional. Any SMTP provider. Without these the app still works, but invitations are copy-and-paste links and reminders only appear in the app |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Required. Any SMTP provider. Used for sign-in codes, invitations, updates and reminders |
 
 Prefer to do it by hand? Copy `.env.example` to `.env`, fill it in, and run `docker compose up -d`. That starts two containers: the app, and Caddy for HTTPS.
 
@@ -62,7 +64,7 @@ Everything lives in the `/data` volume: `dataroom.sqlite` and a `files/` directo
 
 ```bash
 npm install
-npm run dev        # http://localhost:3000, data in ./data
+SMTP_HOST=console npm run dev   # http://localhost:3000, data in ./data; emails (and sign-in codes) print to the terminal
 npm test           # cap table maths
 npm run typecheck
 ```
@@ -74,6 +76,7 @@ Stack: Next.js (App Router, server actions), TypeScript, better-sqlite3, pdf-lib
 - This tool tracks and guides. It is not legal, tax or securities advice, and its SAFE maths is a planning aid, not a closing calculation. Have a lawyer confirm conversions and filings.
 - It does not read incoming email. Replies to its emails go to a founder's own inbox; replies inside the room are threaded.
 - PDFs are made by the browser's own "Save as PDF". The per-page footer and page numbers appear in Chrome and Edge; other browsers show the stamp once at the top.
+- Anyone who controls an invited email inbox can sign in as that person. The optional authenticator-app step protects against that.
 - It does not do e-signatures. Sign elsewhere and upload the signed copy.
 - Watermarks and view-only mode deter casual sharing; they cannot stop someone photographing a screen.
 - It is built for one company per install.

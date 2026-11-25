@@ -1,9 +1,8 @@
 import { requireStaff } from "@/lib/auth";
 import { q } from "@/lib/db";
 import { ago, fmtDate, tierName } from "@/lib/format";
-import { Field, Flash, Hint, PageHead } from "@/components/ui";
-import { mailEnabled } from "@/lib/mail";
-import { createOrgAction, inviteAction, resetLinkAction, revokeInviteAction, setOrgTierAction, setUserDisabledAction } from "./actions";
+import { Field, Flash, PageHead } from "@/components/ui";
+import { createOrgAction, inviteAction, revokeInviteAction, setOrgTierAction, setUserDisabledAction } from "./actions";
 
 type Org = { id: number; name: string; kind: string; tier: number };
 type User = { id: number; email: string; name: string; title: string | null; role: string; org_id: number | null; disabled: number; last_seen_at: string | null; totp_enabled: number };
@@ -32,9 +31,6 @@ export default async function People({ searchParams }: { searchParams: Promise<R
       <td className="right nowrap">
         {u.id !== me.id && (
           <div className="row" style={{ justifyContent: "flex-end" }}>
-            {me.role === "founder" && (
-              <form action={resetLinkAction}><input type="hidden" name="user_id" value={u.id} /><button className="linkbtn small">Reset link</button></form>
-            )}
             <form action={setUserDisabledAction}>
               <input type="hidden" name="user_id" value={u.id} />
               <input type="hidden" name="disabled" value={u.disabled ? "0" : "1"} />
@@ -50,9 +46,6 @@ export default async function People({ searchParams }: { searchParams: Promise<R
     <>
       <PageHead title="People & access" sub="Access belongs to the organisation. Everyone at a firm sees the same things, and a firm's own members can invite their colleagues." />
       <Flash sp={await searchParams} />
-      {!mailEnabled() && (
-        <Hint title="Email is not set up">Invitations will not be emailed. After inviting someone, copy the link shown at the top of this page and send it to them yourself. To turn email on, set the SMTP values in your .env file.</Hint>
-      )}
 
       <div className="grid2">
         <div className="card">
@@ -76,7 +69,7 @@ export default async function People({ searchParams }: { searchParams: Promise<R
               <Field label="First contact's email (optional)"><input name="email" type="email" /></Field>
               <Field label="Their name (optional)"><input name="contact" maxLength={120} /></Field>
             </div>
-            <button className="btn primary">Add{mailEnabled() ? " and invite" : " and get invite link"}</button>
+            <button className="btn primary">Add and invite</button>
           </form>
         </div>
         <div className="card">

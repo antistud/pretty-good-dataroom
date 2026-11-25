@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { q1, run, getSetting, isSetUp } from "./db";
+import { mailEnabled } from "./mail";
 
 const COOKIE = "pgd_session";
 const SESSION_DAYS = 14;
@@ -22,26 +23,6 @@ export type Viewer = {
   ndaAccepted: boolean;
   totpEnabled: boolean;
 };
-
-export function hashPassword(password: string): string {
-  const salt = crypto.randomBytes(16);
-  const hash = crypto.scryptSync(password, salt, 64, { N: 16384, r: 8, p: 1 });
-  return `scrypt$${salt.toString("base64")}$${hash.toString("base64")}`;
-}
-
-export function verifyPassword(password: string, stored: string): boolean {
-  const [scheme, saltB64, hashB64] = stored.split("$");
-  if (scheme !== "scrypt" || !saltB64 || !hashB64) return false;
-  const expected = Buffer.from(hashB64, "base64");
-  const actual = crypto.scryptSync(password, Buffer.from(saltB64, "base64"), expected.length, { N: 16384, r: 8, p: 1 });
-  return crypto.timingSafeEqual(expected, actual);
-}
-
-export function passwordProblem(password: string): string | null {
-  if (password.length < 10) return "Use at least 10 characters.";
-  if (password.length > 200) return "That password is too long.";
-  return null;
-}
 
 export function newToken(): string {
   return crypto.randomBytes(32).toString("base64url");
@@ -118,6 +99,8 @@ export async function completeTwofa() {
 }
 
 export async function currentUser(): Promise<Viewer | null> {
+  // Sign-in depends on email, so without it the room stays closed to everyone.
+  if (!mailEnabled()) return null;
   const row = await sessionRow();
   if (!row || row.twofa_pending) return null;
   const isStaff = row.role === "founder" || row.role === "team";
@@ -140,6 +123,7 @@ export async function currentUser(): Promise<Viewer | null> {
 
 /** Every signed-in page and action starts here. */
 export async function requireUser(opts: { skipNda?: boolean } = {}): Promise<Viewer> {
+  if (!mailEnabled()) redirect("/email-needed");
   if (!isSetUp()) redirect("/setup");
   const me = await currentUser();
   if (!me) redirect("/login");
@@ -215,4 +199,58 @@ export function sameSecret(a: string, b: string): boolean {
 export async function signOutOtherSessions(userId: number) {
   const token = (await cookies()).get(COOKIE)?.value;
   run("DELETE FROM sessions WHERE user_id = ? AND token_hash != ?", userId, token ? hashToken(token) : "");
+}
+
+// ----- Sign-in by emailed code -----
+
+const CODE_MINUTES = 10;
+const CODE_ATTEMPTS = 5;
+const PENDING = "pgd_signin";
+
+/** Codes are short, so the hash is keyed to the user: the same digits never hash alike for two people. */
+function hashCode(userId: number, code: string): string {
+  return crypto.createHash("sha256").update(`${userId}:${code}`).digest("hex");
+}
+
+/** Creates a fresh 6-digit code for this user, replacing any earlier one. Returns the code to be emailed. */
+export function issueLoginCode(userId: number): string {
+  const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
+  run("DELETE FROM login_codes WHERE user_id = ?", userId);
+  run(
+    "INSERT INTO login_codes (user_id, code_hash, expires_at) VALUES (?,?,?)",
+    userId,
+    hashCode(userId, code),
+    new Date(Date.now() + CODE_MINUTES * 60_000).toISOString(),
+  );
+  return code;
+}
+
+/** Checks a code. A code works once, expires after ten minutes, and dies after five wrong guesses. */
+export function checkLoginCode(userId: number, code: string): boolean {
+  const row = q1<{ id: number; code_hash: string; attempts: number }>(
+    "SELECT id, code_hash, attempts FROM login_codes WHERE user_id = ? AND expires_at > ? ORDER BY id DESC LIMIT 1",
+    userId,
+    new Date().toISOString(),
+  );
+  if (!row) return false;
+  if (row.attempts >= CODE_ATTEMPTS) {
+    run("DELETE FROM login_codes WHERE id = ?", row.id);
+    return false;
+  }
+  const clean = code.replace(/\D/g, "");
+  const ok = clean.length === 6 && crypto.timingSafeEqual(Buffer.from(row.code_hash), Buffer.from(hashCode(userId, clean)));
+  if (ok) run("DELETE FROM login_codes WHERE user_id = ?", userId);
+  else run("UPDATE login_codes SET attempts = attempts + 1 WHERE id = ?", row.id);
+  return ok;
+}
+
+/** Remembers, for ten minutes, which email is part-way through signing in on this browser. */
+export async function setPendingEmail(email: string) {
+  (await cookies()).set(PENDING, email, { httpOnly: true, sameSite: "lax", secure: appUrl().startsWith("https://"), path: "/", maxAge: CODE_MINUTES * 60 });
+}
+export async function pendingEmail(): Promise<string | null> {
+  return (await cookies()).get(PENDING)?.value ?? null;
+}
+export async function clearPendingEmail() {
+  (await cookies()).delete(PENDING);
 }

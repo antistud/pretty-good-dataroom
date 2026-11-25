@@ -189,7 +189,7 @@ async function staffDigest(now: Date) {
 /** 5. Remove expired sessions, spent reset links and old de-duplication rows. */
 function housekeeping(now: Date) {
   run("DELETE FROM sessions WHERE expires_at <= ?", now.toISOString());
-  run("DELETE FROM password_resets WHERE used = 1 OR expires_at <= ?", now.toISOString());
+  run("DELETE FROM login_codes WHERE expires_at <= ?", now.toISOString());
   // Daily digest keys are only needed for the day they cover.
   run("DELETE FROM sent_log WHERE (key LIKE 'docs:%' OR key LIKE 'staffdigest:%') AND sent_at < ?", sqlTime(new Date(now.getTime() - 7 * 86400_000)));
 }

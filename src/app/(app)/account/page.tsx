@@ -4,7 +4,7 @@ import { getSetting, q, q1 } from "@/lib/db";
 import { totpUri } from "@/lib/totp";
 import { CATEGORIES } from "@/lib/notify";
 import { Field, Flash, Hint, PageHead } from "@/components/ui";
-import { changePasswordAction, confirmTotpAction, disableTotpAction, emailPrefAction, inviteColleagueAction, startTotpAction } from "./actions";
+import { confirmTotpAction, disableTotpAction, emailPrefAction, inviteColleagueAction, startTotpAction, signOutOthersAction } from "./actions";
 
 export default async function Account({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const me = await requireUser();
@@ -35,20 +35,18 @@ export default async function Account({ searchParams }: { searchParams: Promise<
 
       <div className="grid2">
         <div className="card">
-          <h2>Change password</h2>
-          <form action={changePasswordAction}>
-            <Field label="Current password"><input name="current" type="password" required autoComplete="current-password" /></Field>
-            <Field label="New password" hint="At least 10 characters."><input name="next" type="password" required minLength={10} autoComplete="new-password" /></Field>
-            <button className="btn">Change password</button>
-          </form>
+          <h2>Signing in</h2>
+          <p className="muted">You sign in with a code emailed to <strong>{me.email}</strong>. There is no password to remember or change. Each code works once and lasts ten minutes.</p>
+          <p className="muted">Signed in somewhere you no longer use, or lost a device?</p>
+          <form action={signOutOthersAction}><button className="btn">Sign out everywhere else</button></form>
         </div>
         <div className="card">
           <h2>Two-step sign-in</h2>
           {me.totpEnabled ? (
             <>
-              <p><span className="badge ok">On</span> You are asked for a code from your authenticator app each time you sign in.</p>
+              <p><span className="badge ok">On</span> After the emailed code, you are also asked for a code from your authenticator app.</p>
               <form action={disableTotpAction}>
-                <Field label="Password, to turn it off"><input name="current" type="password" required /></Field>
+                <Field label="A current code, to turn it off"><input name="code" inputMode="numeric" required /></Field>
                 <button className="btn danger">Turn off</button>
               </form>
             </>
@@ -64,7 +62,7 @@ export default async function Account({ searchParams }: { searchParams: Promise<
             </>
           ) : (
             <>
-              <p className="muted">Adds a 6-digit code from your phone when you sign in. Recommended for founders.</p>
+              <p className="muted">Adds a second code, from an authenticator app on your phone, after the emailed one. It protects the room even if someone gets into your email. Recommended for founders.</p>
               <form action={startTotpAction}><button className="btn">Set up two-step sign-in</button></form>
             </>
           )}
@@ -81,7 +79,7 @@ export default async function Account({ searchParams }: { searchParams: Promise<
               <p key={key} style={{ marginBottom: 6 }}><label className="row"><input type="checkbox" name={`cat_${key}`} defaultChecked={prefs[key] !== 0} /> {c.label}</label></p>
             ))}
           </div>
-          <p className="muted small">Sign-in and password emails are always sent.</p>
+          <p className="muted small">Sign-in codes are always sent.</p>
           <button className="btn">Save</button>
         </form>
       </div>

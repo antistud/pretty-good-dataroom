@@ -1,7 +1,7 @@
 "use server";
 
 import { q1, run } from "@/lib/db";
-import { appUrl, hashToken, newToken, requireFounder, requireStaff } from "@/lib/auth";
+import { requireStaff } from "@/lib/auth";
 import { createInvite } from "@/lib/invites";
 import { logActivity } from "@/lib/activity";
 import { flash } from "@/lib/flash";
@@ -94,16 +94,4 @@ export async function revokeInviteAction(form: FormData) {
   run("UPDATE invites SET revoked = 1 WHERE id = ?", Number(form.get("invite_id")));
   logActivity(me, "invite.revoke", "invite", Number(form.get("invite_id")));
   flash("/people", "Invitation cancelled. The link no longer works.");
-}
-
-/** Founders can hand someone a reset link when email is not configured. */
-export async function resetLinkAction(form: FormData) {
-  const me = await requireFounder();
-  const userId = Number(form.get("user_id"));
-  const user = q1<{ email: string }>("SELECT email FROM users WHERE id = ?", userId);
-  if (!user) flash("/people", "User not found.", "error");
-  const token = newToken();
-  run("INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?,?,?)", hashToken(token), userId, new Date(Date.now() + 3600_000).toISOString());
-  logActivity(me, "user.reset_link", "user", userId, user!.email);
-  flash("/people", `Reset link for ${user!.email}, valid for one hour: ${appUrl()}/reset/${token}`);
 }

@@ -3,8 +3,8 @@
 import { redirect } from "next/navigation";
 import { q1, run, isSetUp, setSetting, getSetting } from "@/lib/db";
 import {
-  appUrl, clientIp, completeTwofa, createSession, destroySession, hashPassword, hashToken, newToken,
-  passwordProblem, pendingTwofaUserId, rateLimited, requireUser, sameSecret, verifyPassword,
+  checkLoginCode, clearPendingEmail, clientIp, completeTwofa, createSession, destroySession, issueLoginCode,
+  pendingEmail, pendingTwofaUserId, rateLimited, requireUser, sameSecret, setPendingEmail,
 } from "@/lib/auth";
 import { verifyTotp } from "@/lib/totp";
 import { findInvite } from "@/lib/invites";
@@ -12,17 +12,17 @@ import { logActivity } from "@/lib/activity";
 import { flash } from "@/lib/flash";
 import { afterJoin } from "@/lib/automations";
 import { formStr } from "@/lib/format";
-import { mailEnabled, sendMail } from "@/lib/mail";
+import { escapeHtml, mailEnabled, sendMail } from "@/lib/mail";
+
+const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 export async function setupAction(form: FormData) {
+  if (!mailEnabled()) redirect("/email-needed");
   if (isSetUp()) redirect("/login");
   const company = formStr(form.get("company"), 120);
   const name = formStr(form.get("name"), 120);
   const email = formStr(form.get("email"), 200).toLowerCase();
-  const password = String(form.get("password") ?? "");
-  if (!company || !name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) flash("/setup", "Fill in every field with a valid email.", "error");
-  const problem = passwordProblem(password);
-  if (problem) flash("/setup", problem, "error");
+  if (!company || !name || !EMAIL.test(email)) flash("/setup", "Fill in every field with a valid email.", "error");
   // If SETUP_TOKEN is set, first-run setup needs it. Stops a stranger claiming a fresh install.
   const required = process.env.SETUP_TOKEN;
   if (required) {
@@ -30,25 +30,47 @@ export async function setupAction(form: FormData) {
     if (!sameSecret(String(form.get("setup_token") ?? ""), required)) flash("/setup", "That setup token is not correct.", "error");
   }
   setSetting("company_name", company);
-  const res = run("INSERT INTO users (email, name, password_hash, role, last_seen_at) VALUES (?,?,?, 'founder', datetime('now'))", email, name, hashPassword(password));
+  const res = run("INSERT INTO users (email, name, role, last_seen_at) VALUES (?,?, 'founder', datetime('now'))", email, name);
   await createSession(Number(res.lastInsertRowid), false);
   redirect("/home");
 }
 
-export async function loginAction(form: FormData) {
+/** Step one of signing in: ask for a code. The answer is the same whether or not the email has access. */
+export async function requestCodeAction(form: FormData) {
+  if (!mailEnabled()) redirect("/email-needed");
   const email = formStr(form.get("email"), 200).toLowerCase();
-  const password = String(form.get("password") ?? "");
-  const ip = await clientIp();
-  if (rateLimited(`login:${ip}`, 20) || rateLimited(`login:${email}`, 8)) {
+  if (!EMAIL.test(email)) flash("/login", "That email address doesn't look right.", "error");
+  if (rateLimited(`code:ip:${await clientIp()}`, 20) || rateLimited(`code:${email}`, 5)) {
+    flash("/login", "Too many codes requested. Wait 15 minutes and try again.", "error");
+  }
+  const user = q1<{ id: number; name: string; disabled: number }>("SELECT id, name, disabled FROM users WHERE email = ?", email);
+  if (user && !user.disabled) {
+    const code = issueLoginCode(user.id);
+    const company = getSetting("company_name");
+    await sendMail(
+      email,
+      `${code} is your ${company} sign-in code`,
+      `<p>Hi ${escapeHtml(user.name.split(/\s+/)[0])},</p><p>Your sign-in code is</p><p style="font:600 30px/1.2 ui-monospace,Menlo,monospace;letter-spacing:0.18em;margin:6px 0 14px">${code}</p><p>It works once and expires in ten minutes. If you did not ask for it, you can ignore this email; nobody can sign in without the code.</p>`,
+      undefined,
+      { transactional: true, preview: `Your sign-in code is ${code}` },
+    );
+  }
+  await setPendingEmail(email);
+  redirect("/login/code");
+}
+
+/** Step two: the code. */
+export async function verifyCodeAction(form: FormData) {
+  const email = await pendingEmail();
+  if (!email) flash("/login", "That took too long. Enter your email again for a new code.", "error");
+  if (rateLimited(`verify:${email}`, 12) || rateLimited(`verify:ip:${await clientIp()}`, 40)) {
     flash("/login", "Too many attempts. Wait 15 minutes and try again.", "error");
   }
-  const user = q1<{ id: number; password_hash: string; totp_enabled: number; disabled: number; org_id: number | null }>(
-    "SELECT id, password_hash, totp_enabled, disabled, org_id FROM users WHERE email = ?",
-    email,
-  );
-  // Always run a hash comparison so timing does not reveal whether the email exists.
-  const ok = verifyPassword(password, user?.password_hash ?? "scrypt$AAAAAAAAAAAAAAAAAAAAAA==$" + "A".repeat(86) + "==");
-  if (!user || !ok || user.disabled) flash("/login", "Email or password is not correct.", "error");
+  const user = q1<{ id: number; totp_enabled: number; disabled: number; org_id: number | null }>("SELECT id, totp_enabled, disabled, org_id FROM users WHERE email = ?", email);
+  if (!user || user.disabled || !checkLoginCode(user.id, String(form.get("code") ?? ""))) {
+    flash("/login/code", "That code is not right, or it has expired. Check the newest email, or ask for a new code.", "error");
+  }
+  await clearPendingEmail();
   await createSession(user!.id, !!user!.totp_enabled);
   if (user!.totp_enabled) redirect("/login/2fa");
   run("UPDATE users SET last_seen_at = datetime('now') WHERE id = ?", user!.id);
@@ -75,24 +97,22 @@ export async function logoutAction() {
   redirect("/login");
 }
 
+/** The invitation link itself proves the person owns the email, so accepting it signs them in. */
 export async function acceptInviteAction(form: FormData) {
+  if (!mailEnabled()) redirect("/email-needed");
   const token = String(form.get("token") ?? "");
   const back = `/invite/${encodeURIComponent(token)}`;
   if (rateLimited(`invite:${await clientIp()}`, 30)) flash(back, "Too many attempts. Wait a few minutes.", "error");
   const invite = findInvite(token);
   if (!invite) redirect(back);
   const name = formStr(form.get("name"), 120);
-  const password = String(form.get("password") ?? "");
   if (!name) flash(back, "Tell us your name.", "error");
-  const problem = passwordProblem(password);
-  if (problem) flash(back, problem, "error");
-  if (q1("SELECT 1 FROM users WHERE email = ?", invite!.email)) flash("/login", "You already have an account. Sign in.", "error");
+  if (q1("SELECT 1 FROM users WHERE email = ?", invite!.email)) flash("/login", "You already have access. Sign in with your email.", "error");
   const res = run(
-    "INSERT INTO users (email, name, title, password_hash, role, org_id, last_seen_at) VALUES (?,?,?,?,?,?, datetime('now'))",
+    "INSERT INTO users (email, name, title, role, org_id, last_seen_at) VALUES (?,?,?,?,?, datetime('now'))",
     invite!.email,
     name,
     formStr(form.get("title"), 120) || null,
-    hashPassword(password),
     invite!.role,
     invite!.org_id,
   );
@@ -109,38 +129,4 @@ export async function acceptNdaAction() {
   run("UPDATE users SET nda_accepted_at = datetime('now') WHERE id = ?", me.id);
   logActivity(me, "nda.accept", undefined, undefined, getSetting("nda_text").slice(0, 200));
   redirect("/home");
-}
-
-export async function forgotAction(form: FormData) {
-  const email = formStr(form.get("email"), 200).toLowerCase();
-  if (rateLimited(`forgot:${await clientIp()}`, 5)) flash("/forgot", "Too many attempts. Wait 15 minutes.", "error");
-  const user = q1<{ id: number }>("SELECT id FROM users WHERE email = ? AND disabled = 0", email);
-  if (user && mailEnabled()) {
-    const token = newToken();
-    run("INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?,?,?)", hashToken(token), user.id, new Date(Date.now() + 3600_000).toISOString());
-    await sendMail(email, "Reset your data room password", "<p>Someone asked to reset the password for this account. If that was you, use the button below within one hour. If not, ignore this email.</p>", {
-      label: "Choose a new password",
-      url: `${appUrl()}/reset/${token}`,
-    }, { transactional: true });
-  }
-  // Same message either way, so this page cannot be used to test which emails have accounts.
-  flash("/forgot", mailEnabled() ? "If that email has an account, a reset link is on its way." : "Email is not set up on this data room. Ask the founder who invited you for a reset link.");
-}
-
-export async function resetAction(form: FormData) {
-  const token = String(form.get("token") ?? "");
-  const back = `/reset/${encodeURIComponent(token)}`;
-  const row = q1<{ user_id: number }>(
-    "SELECT user_id FROM password_resets WHERE token_hash = ? AND used = 0 AND expires_at > ?",
-    hashToken(token),
-    new Date().toISOString(),
-  );
-  if (!row) redirect(back);
-  const password = String(form.get("password") ?? "");
-  const problem = passwordProblem(password);
-  if (problem) flash(back, problem, "error");
-  run("UPDATE users SET password_hash = ? WHERE id = ?", hashPassword(password), row!.user_id);
-  run("UPDATE password_resets SET used = 1 WHERE token_hash = ?", hashToken(token));
-  run("DELETE FROM sessions WHERE user_id = ?", row!.user_id);
-  flash("/login", "Password changed. Sign in with the new one.");
 }

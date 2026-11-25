@@ -33,13 +33,15 @@ jobs:
       - run: docker build -t dataroom-ci .
       - name: Start it and wait for the sign-in page
         run: |
-          docker run -d --name dataroom-ci -p 3000:3000 -e APP_URL=http://localhost:3000 dataroom-ci
+          docker run -d --name dataroom-ci -p 3000:3000 -e APP_URL=http://localhost:3000 -e SMTP_HOST=console dataroom-ci
           for i in $(seq 1 30); do
             if curl -fsS -o /dev/null http://localhost:3000/setup; then echo "up"; exit 0; fi
             sleep 2
           done
           docker logs dataroom-ci
           exit 1
+      - name: The server-side sign-in code helper is in the image
+        run: docker exec dataroom-ci node scripts/login-code.js nobody@example.com 2>&1 | grep -q "has access"
       - run: bash -n install.sh
 
   secrets:

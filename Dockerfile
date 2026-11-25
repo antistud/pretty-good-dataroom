@@ -31,6 +31,8 @@ COPY --from=build --chown=dataroom:dataroom /app/.next/static ./.next/static
 # binaries in its own prebuilds/ folder; copy the whole package so the right
 # .node file is present even if build-time file tracing misses it.
 COPY --from=build --chown=dataroom:dataroom /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
+# Server-side helpers (for example, issuing a sign-in code when email is down).
+COPY --from=build --chown=dataroom:dataroom /app/scripts ./scripts
 
 USER dataroom
 VOLUME /data

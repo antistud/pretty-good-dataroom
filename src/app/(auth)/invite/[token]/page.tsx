@@ -20,16 +20,15 @@ export default async function Invite({ params, searchParams }: { params: Promise
       <h1>Welcome to {company}</h1>
       <p className="muted" style={{ marginTop: 6 }}>
         You are joining as {invite.role === "supporter" ? "a supporter" : invite.role === "investor" ? "an investor" : "a team member"}
-        {invite.org_name ? <> with <strong>{invite.org_name}</strong></> : null}. Choose a password and you are in.
+        {invite.org_name ? <> with <strong>{invite.org_name}</strong></> : null}. Confirm your name and you are in.
       </p>
       <Flash sp={await searchParams} />
       <form action={acceptInviteAction}>
         <input type="hidden" name="token" value={token} />
-        <Field label="Email"><input value={invite.email} disabled readOnly /></Field>
+        <Field label="Email" hint="Next time, sign in with this email and we will send you a code. There is no password."><input value={invite.email} disabled readOnly /></Field>
         <Field label="Your name"><input name="name" required defaultValue={invite.name ?? ""} maxLength={120} /></Field>
         <Field label="Your title (optional)"><input name="title" maxLength={120} /></Field>
-        <Field label="Choose a password" hint="At least 10 characters."><input name="password" type="password" required minLength={10} autoComplete="new-password" /></Field>
-        <button className="btn primary big">Create my account</button>
+        <button className="btn primary big">Open the data room</button>
       </form>
     </div>
   );

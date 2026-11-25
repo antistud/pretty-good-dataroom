@@ -1,25 +1,24 @@
 import { redirect } from "next/navigation";
 import { isSetUp } from "@/lib/db";
 import { currentUser } from "@/lib/auth";
+import { mailEnabled } from "@/lib/mail";
 import { Field, Flash } from "@/components/ui";
-import { loginAction } from "../actions";
+import { requestCodeAction } from "../actions";
 
 export default async function Login({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
+  if (!mailEnabled()) redirect("/email-needed");
   if (!isSetUp()) redirect("/setup");
   if (await currentUser()) redirect("/home");
   return (
     <div className="card">
       <h1>Sign in</h1>
-      <p className="muted" style={{ marginTop: 6 }}>Access is by invitation. If you were invited, use the link in your invitation first.</p>
+      <p className="muted" style={{ marginTop: 6 }}>Enter your email and we will send you a six-digit code. There is no password.</p>
       <Flash sp={await searchParams} />
-      <form action={loginAction}>
-        <Field label="Email"><input name="email" type="email" required autoComplete="username" /></Field>
-        <Field label="Password"><input name="password" type="password" required autoComplete="current-password" /></Field>
-        <div className="spread">
-          <button className="btn primary">Sign in</button>
-          <a href="/forgot" className="small">Forgot password?</a>
-        </div>
+      <form action={requestCodeAction}>
+        <Field label="Email"><input name="email" type="email" required autoComplete="email" autoFocus /></Field>
+        <button className="btn primary">Email me a code</button>
       </form>
+      <p className="muted small" style={{ marginTop: 16 }}>Access is by invitation. If you were invited, open the link in your invitation email first.</p>
     </div>
   );
 }

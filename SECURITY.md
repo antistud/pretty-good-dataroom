@@ -14,8 +14,18 @@ an attacker could do with it. You will get a reply there.
   email, and only if you configure SMTP.
 - **Invite-only.** There is no public sign-up. Invitations are single-use,
   expire after 14 days and can be cancelled.
-- **Passwords** are hashed with scrypt and a per-user salt. Two-step sign-in
-  (TOTP) is available to every user. Sign-in is rate limited.
+- **No passwords.** People sign in with a six-digit code sent to their email.
+  A code works once, expires after ten minutes, is replaced when a new one is
+  requested and dies after five wrong guesses; only a hash is stored. Requests
+  and attempts are rate limited, and the sign-in screen answers the same way
+  whether or not an email has access. An authenticator-app code (TOTP) can be
+  added as a second step. "Sign out everywhere else" ends other sessions.
+- **Email is part of the trust boundary.** Whoever controls an invited inbox
+  can sign in as that person, so access is as strong as their email account
+  unless they add the second step. Without SMTP configured the app serves a
+  single "email is not set up" page and nothing else.
+- **Recovery.** If email is down, `install.sh code <email>` issues a code on
+  the server. Anyone able to run it already controls the server and its data.
 - **Sessions** are random tokens stored hashed, in an `HttpOnly`, `SameSite=Lax`
   cookie that is marked `Secure` when `APP_URL` is `https://`.
 - **Access levels.** Every folder, document, page, update section and built-in

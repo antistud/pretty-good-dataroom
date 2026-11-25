@@ -1,8 +1,18 @@
 import nodemailer, { type Transporter } from "nodemailer";
 import { getSetting, run } from "./db";
 
+/** True when the app can send email. Sign-in depends on it, so the app does nothing without it. */
 export function mailEnabled(): boolean {
   return !!process.env.SMTP_HOST;
+}
+
+/**
+ * For development only: SMTP_HOST=console prints each email to the server log
+ * instead of sending it. Never use this on a real room: anyone who can read
+ * the log can read every sign-in code.
+ */
+function consoleMode(): boolean {
+  return process.env.SMTP_HOST === "console";
 }
 
 let transport: Transporter | null = null;
@@ -76,6 +86,11 @@ export async function sendMail(to: string, subject: string, bodyHtml: string, ct
   if (!mailEnabled()) {
     run("INSERT INTO email_log (to_email, subject, status) VALUES (?,?, 'not sent: email is off')", to, cleanSubject);
     return false;
+  }
+  if (consoleMode()) {
+    console.log(`[mail:console] to ${to} | ${cleanSubject}${cta ? ` | ${cta.url}` : ""}`);
+    run("INSERT INTO email_log (to_email, subject, status) VALUES (?,?, 'printed to the server log')", to, cleanSubject);
+    return true;
   }
   try {
     await getTransport().sendMail({

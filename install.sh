@@ -4,6 +4,11 @@
 #   Fresh server:   curl -fsSL https://raw.githubusercontent.com/antistud/pretty-good-dataroom/main/install.sh | sudo bash -s -- room.example.com
 #   Update:         sudo /opt/dataroom/install.sh
 #   Backup now:     sudo /opt/dataroom/install.sh backup
+#   Locked out:     sudo /opt/dataroom/install.sh code you@example.com
+#
+# People sign in with a code sent by email, so the room needs SMTP settings.
+# The script asks for them, or reads SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
+# and SMTP_FROM from the environment.
 #
 # It installs Docker if missing, writes .env, starts the app with HTTPS, and
 # schedules a nightly backup. Running it again is safe: it keeps your settings and data.
@@ -13,6 +18,8 @@ REPO="https://github.com/antistud/pretty-good-dataroom.git"
 DIR="${DATAROOM_DIR:-/opt/dataroom}"
 say() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 die() { printf '\n\033[31m%s\033[0m\n' "$*" >&2; exit 1; }
+# True only when a person is at a terminal we can ask questions on (not under cloud-init or cron).
+has_terminal() { ( : </dev/tty ) 2>/dev/null; }
 
 main() {
 [ "$(id -u)" = "0" ] || die "Run this as root (put sudo in front)."
@@ -34,6 +41,11 @@ backup() {
 }
 
 if [ "${1:-}" = "backup" ]; then backup; exit 0; fi
+if [ "${1:-}" = "code" ]; then
+  [ -n "${2:-}" ] || die "Give the email address, for example: install.sh code you@example.com"
+  cd "$DIR" && docker compose exec -T dataroom node scripts/login-code.js "$2"
+  exit $?
+fi
 
 # ---- 1. Docker ----
 if ! command -v docker >/dev/null 2>&1; then
@@ -56,7 +68,7 @@ cd "$DIR"
 # ---- 3. Settings (written once, then left alone) ----
 if [ ! -f .env ]; then
   DOMAIN="${1:-${DOMAIN:-}}"
-  if [ -z "$DOMAIN" ] && [ -r /dev/tty ]; then
+  if [ -z "$DOMAIN" ] && has_terminal; then
     read -rp "The address people will use, e.g. room.example.com: " DOMAIN </dev/tty || true
   fi
   DOMAIN="$(printf '%s' "$DOMAIN" | sed -E 's#^https?://##; s#/.*$##' | tr 'A-Z' 'a-z')"
@@ -72,17 +84,43 @@ DOMAIN=$DOMAIN
 # Asked for once, on the first-run setup screen.
 SETUP_TOKEN=$TOKEN
 
-# Email (optional). Fill these in to send invitations, updates and reminders.
-SMTP_HOST=
-SMTP_PORT=587
-SMTP_USER=
-SMTP_PASS=
-SMTP_FROM=
 ENV
   NEW_INSTALL=1
 fi
 DOMAIN="$(grep -E '^DOMAIN=' .env | head -1 | cut -d= -f2-)"
 [ -n "$DOMAIN" ] || die "DOMAIN is missing from $DIR/.env. Add a line like DOMAIN=room.example.com and run this again."
+
+# ---- 3b. Email (required: it is how everyone signs in) ----
+setting() { grep -E "^$1=" .env | head -1 | cut -d= -f2- || true; }
+put() { # put KEY VALUE: replace the line in .env, or add it
+  local key="$1" value="$2" tmp
+  tmp="$(mktemp)"
+  grep -vE "^$key=" .env > "$tmp" || true
+  printf '%s=%s\n' "$key" "$value" >> "$tmp"
+  cat "$tmp" > .env && rm -f "$tmp"
+}
+if [ -z "$(setting SMTP_HOST)" ]; then
+  if [ -n "${SMTP_HOST:-}" ]; then
+    put SMTP_HOST "$SMTP_HOST"; put SMTP_PORT "${SMTP_PORT:-587}"; put SMTP_USER "${SMTP_USER:-}"; put SMTP_PASS "${SMTP_PASS:-}"; put SMTP_FROM "${SMTP_FROM:-}"
+  elif has_terminal; then
+    say "Email settings"
+    echo "People sign in with a code sent by email, so the room needs a way to send it."
+    echo "Use the SMTP details from any email service (Resend, Postmark, SendGrid, Amazon SES, Google Workspace…)."
+    echo "Many hosts block ports 25, 465 and 587; most services also offer 2525."
+    ask() { local answer; read -rp "  $1: " answer </dev/tty; printf '%s' "$answer"; }
+    H="$(ask 'SMTP host (e.g. smtp.resend.com)')"
+    [ -n "$H" ] || die "Email settings are required. Nothing was changed; anything already running is still running. Run this again when you have them."
+    P="$(ask 'SMTP port [587]')"
+    U="$(ask 'SMTP username')"
+    read -rsp "  SMTP password or API key (not shown): " W </dev/tty; echo
+    F="$(ask 'From address (e.g. Acme <room@example.com>)')"
+    put SMTP_HOST "$H"; put SMTP_PORT "${P:-587}"; put SMTP_USER "$U"; put SMTP_PASS "$W"; put SMTP_FROM "$F"
+  else
+    die "Email settings are required, because people sign in with a code sent by email.
+Add SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS and SMTP_FROM to $DIR/.env and run this again.
+Nothing was changed; anything already running is still running."
+  fi
+fi
 
 # ---- 4. Start ----
 say "Starting the data room…"
@@ -125,6 +163,8 @@ if [ "${NEW_INSTALL:-}" = "1" ]; then
   echo "  Setup token:  $(grep -E '^SETUP_TOKEN=' .env | cut -d= -f2-)"
   echo
   echo "  The first screen asks for that token, then creates your founder account."
+  echo "  After that you sign in with a code emailed to you. If email ever fails:"
+  echo "    $DIR/install.sh code you@example.com"
   echo "  If the page does not load yet, the DNS for $DOMAIN is not pointing here;"
   echo "  the certificate is issued automatically as soon as it does."
 else

@@ -17,18 +17,22 @@ Note the Droplet's IP address.
 
 Where your domain's DNS is managed, add an **A record** for the name you want (for example `room`) pointing at the Droplet's IP.
 
-## 3. Run one command
+## 3. Have your email settings ready
+
+People sign in with a code sent by email, so the installer asks for SMTP details: host, port, username, password (or API key) and a "from" address. Any email service works. DigitalOcean blocks outgoing ports 25, 465 and 587 on many accounts; most services also offer **2525**, so use that if codes do not arrive.
+
+## 4. Run one command
 
 ```bash
 ssh root@YOUR_DROPLET_IP
 curl -fsSL https://raw.githubusercontent.com/antistud/pretty-good-dataroom/main/install.sh | bash -s -- room.example.com
 ```
 
-Replace `room.example.com` with your address. The script installs Docker, starts the data room with HTTPS, schedules a nightly backup, and prints your address and a **setup token**.
+Replace `room.example.com` with your address. The script installs Docker, asks for the email settings, starts the data room with HTTPS, schedules a nightly backup, and prints your address and a **setup token**.
 
-## 4. Open it
+## 5. Open it
 
-Go to your address, enter the setup token, and create your founder account.
+Go to your address, enter the setup token, and create your founder account. From then on you sign in by entering your email and typing the six-digit code we send; there is no password.
 
 ## Even less typing: do it all at creation
 
@@ -36,6 +40,7 @@ When creating the Droplet, open **Advanced options → Add Initialization script
 
 ```bash
 #!/bin/bash
+export SMTP_HOST=smtp.example.com SMTP_PORT=2525 SMTP_USER=your-username SMTP_PASS=your-password SMTP_FROM="Acme <room@example.com>"
 curl -fsSL https://raw.githubusercontent.com/antistud/pretty-good-dataroom/main/install.sh | bash -s -- room.example.com > /root/dataroom-install.log 2>&1
 ```
 
@@ -50,7 +55,8 @@ ssh root@YOUR_DROPLET_IP grep SETUP_TOKEN /opt/dataroom/.env
 | To | Run on the server |
 |---|---|
 | Update to the latest version | `/opt/dataroom/install.sh` |
-| Turn on email | edit `/opt/dataroom/.env`, fill in the `SMTP_` lines, then `/opt/dataroom/install.sh` |
+| Change email settings | edit `/opt/dataroom/.env`, change the `SMTP_` lines, then `/opt/dataroom/install.sh` |
+| Get in when email is down | `/opt/dataroom/install.sh code you@example.com` |
 | Back up right now | `/opt/dataroom/install.sh backup` |
 | See what went wrong | `cd /opt/dataroom && docker compose logs --tail 50` |
 

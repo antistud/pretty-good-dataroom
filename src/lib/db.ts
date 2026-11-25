@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT NOT NULL UNIQUE COLLATE NOCASE,
   name TEXT NOT NULL,
   title TEXT,
-  password_hash TEXT NOT NULL,
+  -- Unused since sign-in moved to emailed codes; kept so older databases still open.
+  password_hash TEXT NOT NULL DEFAULT '',
   role TEXT NOT NULL CHECK (role IN ('founder','team','investor','supporter')),
   org_id INTEGER REFERENCES orgs(id) ON DELETE SET NULL,
   totp_secret TEXT,
@@ -62,6 +63,17 @@ CREATE TABLE IF NOT EXISTS invites (
   last_nudged_at TEXT
 );
 
+-- One-time sign-in codes sent by email. Only a hash is stored.
+CREATE TABLE IF NOT EXISTS login_codes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  code_hash TEXT NOT NULL,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- No longer used (passwords were removed); kept so older databases still open.
 CREATE TABLE IF NOT EXISTS password_resets (
   token_hash TEXT PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

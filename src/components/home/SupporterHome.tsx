@@ -71,7 +71,7 @@ export default async function SupporterHome({ me }: { me: Viewer }) {
       )}
 
       <p className="muted small">
-        Want a colleague or partner to get these too? <Link href="/account">Invite them from your account page</Link>, where you can also change your password and email settings.
+        Want a colleague or partner to get these too? <Link href="/account">Invite them from your account page</Link>.
       </p>
     </>
   );

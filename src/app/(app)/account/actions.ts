@@ -1,7 +1,7 @@
 "use server";
 
 import { q1, run } from "@/lib/db";
-import { hashPassword, passwordProblem, requireUser, signOutOtherSessions, verifyPassword } from "@/lib/auth";
+import { requireUser, signOutOtherSessions } from "@/lib/auth";
 import { newTotpSecret, verifyTotp } from "@/lib/totp";
 import { createInvite } from "@/lib/invites";
 import { logActivity } from "@/lib/activity";
@@ -9,18 +9,11 @@ import { flash } from "@/lib/flash";
 import { CATEGORIES } from "@/lib/notify";
 import { formStr } from "@/lib/format";
 
-export async function changePasswordAction(form: FormData) {
+export async function signOutOthersAction() {
   const me = await requireUser();
-  const row = q1<{ password_hash: string }>("SELECT password_hash FROM users WHERE id = ?", me.id)!;
-  if (!verifyPassword(String(form.get("current") ?? ""), row.password_hash)) flash("/account", "Your current password is not correct.", "error");
-  const next = String(form.get("next") ?? "");
-  const problem = passwordProblem(next);
-  if (problem) flash("/account", problem, "error");
-  run("UPDATE users SET password_hash = ? WHERE id = ?", hashPassword(next), me.id);
-  // Anyone else signed in as this person (a lost laptop, a shared computer) is signed out.
   await signOutOtherSessions(me.id);
-  logActivity(me, "account.password");
-  flash("/account", "Password changed. Any other device signed in as you has been signed out.");
+  logActivity(me, "account.signout_others");
+  flash("/account", "Done. Every other device signed in as you has been signed out.");
 }
 
 export async function startTotpAction() {
@@ -42,8 +35,9 @@ export async function confirmTotpAction(form: FormData) {
 
 export async function disableTotpAction(form: FormData) {
   const me = await requireUser();
-  const row = q1<{ password_hash: string }>("SELECT password_hash FROM users WHERE id = ?", me.id)!;
-  if (!verifyPassword(String(form.get("current") ?? ""), row.password_hash)) flash("/account", "Your password is not correct.", "error");
+  // Turning it off takes a current code, so someone at an unlocked laptop cannot quietly remove it.
+  const row = q1<{ totp_secret: string | null }>("SELECT totp_secret FROM users WHERE id = ?", me.id);
+  if (!row?.totp_secret || !verifyTotp(row.totp_secret, String(form.get("code") ?? ""))) flash("/account", "That code is not correct. Try the newest one from your authenticator app.", "error");
   run("UPDATE users SET totp_enabled = 0, totp_secret = NULL WHERE id = ?", me.id);
   logActivity(me, "account.2fa_off");
   flash("/account", "Two-step sign-in is off.");

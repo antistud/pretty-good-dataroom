@@ -73,7 +73,7 @@ export default async function Activity({ searchParams }: { searchParams: Promise
       case "user.disable": return `removed access for ${r.detail ?? users.get(id) ?? "a user"}`;
       case "user.enable": return `restored access for ${r.detail ?? users.get(id) ?? "a user"}`;
       case "user.reset_link": return `created a password reset link for ${r.detail ?? "a user"}`;
-      case "account.password": return "changed their password";
+      case "account.signout_others": return "signed out their other devices";
       case "account.2fa_on": return "turned on two-step sign-in";
       case "account.2fa_off": return "turned off two-step sign-in";
       case "folder.create": return `created the folder ${r.detail ?? folders.get(id) ?? ""}`;
