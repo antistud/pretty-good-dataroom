@@ -44,6 +44,38 @@ What it does not do: encrypt data at rest (use disk encryption on the host),
 stop a permitted viewer from photographing their screen, or replace a signed
 NDA or legal advice.
 
+## AI assistant connectors
+
+A founder or team member can create a connector address (an MCP endpoint at
+`/mcp/<secret>`) and give it to an AI assistant of their choice.
+
+- **The address is the credential.** It is a long random value shown once and
+  stored only as a hash. Anyone holding it can use the connector, so treat it
+  like a password and turn it off on the "From your documents" page if it may
+  have leaked. Each person can have up to five.
+- **What it can read:** the company profile, team, cap table, rounds and SAFEs.
+  It cannot read documents, investors, the pipeline, people, requests,
+  updates or activity.
+- **What it can write:** suggestions only. A suggestion is stored as pending
+  and changes nothing until a founder reviews and applies it, item by item.
+  This is deliberate: documents handed to an assistant can contain text that
+  tries to steer it, and an assistant can simply be wrong.
+- Everything an assistant sends is treated as untrusted input: parsed
+  leniently, then typed, range-checked and length-limited before it is stored
+  or shown. Requests from other websites (an `Origin` header that is not the
+  room's own) are refused, and requests are rate limited.
+- The app contains no AI and never sends files anywhere. Whatever a founder
+  uploads to their assistant is governed by that provider's terms.
+
+## What has and has not been checked
+
+The code has been reviewed by its authors for missing permission checks, SQL
+built from user input, unescaped output and unsafe redirects, and the access
+rules are exercised by browser tests. It has **not** had an independent
+security audit or penetration test. Treat it accordingly: keep it updated,
+turn on the authenticator-app step for founders, and do not put anything in it
+that you could not bear to have read.
+
 ## Operator checklist
 
 - [ ] Serve it over **HTTPS** behind a reverse proxy and set `APP_URL` to the
