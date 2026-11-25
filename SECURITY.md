@@ -14,6 +14,11 @@ an attacker could do with it. You will get a reply there.
   email, and only if you configure SMTP.
 - **Invite-only.** There is no public sign-up. Invitations are single-use,
   expire after 14 days and can be cancelled.
+- **HTTPS and browser policy.** The bundled setup puts Caddy in front for
+  HTTPS and keeps the app's own port private. Pages send a
+  Content-Security-Policy that only allows scripts, styles, fonts and images
+  from the app itself, forms that post back to it, and no framing by other
+  sites.
 - **No passwords.** People sign in with a six-digit code sent to their email.
   A code works once, expires after ten minutes, is replaced when a new one is
   requested and dies after five wrong guesses; only a hash is stored. Requests
