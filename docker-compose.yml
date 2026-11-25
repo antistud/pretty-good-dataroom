@@ -1,0 +1,19 @@
+# One container: the app, its SQLite database and uploaded files (in the "data" volume).
+services:
+  dataroom:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+    ports:
+      # Bound to localhost on purpose. Do not expose port 3000 to the internet:
+      # put a TLS reverse proxy (Caddy, nginx, Traefik) in front and set APP_URL
+      # to the https:// address. See Caddyfile.example.
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - data:/data
+
+volumes:
+  # Back this volume up. It holds everything: the database and every uploaded file.
+  data:
