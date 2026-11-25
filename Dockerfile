@@ -4,7 +4,9 @@
 FROM node:22-bookworm-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+# No install scripts: the one native module (better-sqlite3) ships ready-made
+# binaries, and running its build step would need a compiler this image does not have.
+RUN npm ci --ignore-scripts
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 # The build must not touch real data; point it at a throwaway directory.

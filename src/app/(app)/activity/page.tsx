@@ -27,7 +27,7 @@ export default async function Activity({ searchParams }: { searchParams: Promise
   await requireStaff();
   const sp = await searchParams;
   const orgId = Number(sp.org) || 0;
-  const type = TYPES[sp.type] ? sp.type : "all";
+  const type = Object.hasOwn(TYPES, sp.type ?? "") ? sp.type : "all";
 
   const summary = q<Summary>(
     `SELECT o.id, o.name, o.kind, o.tier,

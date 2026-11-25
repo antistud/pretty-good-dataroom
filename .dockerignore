@@ -10,4 +10,6 @@ data
 *.md
 Dockerfile
 docker-compose.yml
-Caddyfile.example
+deploy
+install.sh
+docs

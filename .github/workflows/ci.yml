@@ -25,6 +25,23 @@ jobs:
           NEXT_TELEMETRY_DISABLED: "1"
       - run: npm audit --audit-level=high
 
+  image:
+    # Proves the Docker image builds and the container starts and answers.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t dataroom-ci .
+      - name: Start it and wait for the sign-in page
+        run: |
+          docker run -d --name dataroom-ci -p 3000:3000 -e APP_URL=http://localhost:3000 dataroom-ci
+          for i in $(seq 1 30); do
+            if curl -fsS -o /dev/null http://localhost:3000/setup; then echo "up"; exit 0; fi
+            sleep 2
+          done
+          docker logs dataroom-ci
+          exit 1
+      - run: bash -n install.sh
+
   secrets:
     runs-on: ubuntu-latest
     steps:

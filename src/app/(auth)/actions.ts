@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { q1, run, isSetUp, setSetting, getSetting } from "@/lib/db";
 import {
   appUrl, clientIp, completeTwofa, createSession, destroySession, hashPassword, hashToken, newToken,
-  passwordProblem, pendingTwofaUserId, rateLimited, requireUser, verifyPassword,
+  passwordProblem, pendingTwofaUserId, rateLimited, requireUser, sameSecret, verifyPassword,
 } from "@/lib/auth";
 import { verifyTotp } from "@/lib/totp";
 import { findInvite } from "@/lib/invites";
@@ -25,7 +25,10 @@ export async function setupAction(form: FormData) {
   if (problem) flash("/setup", problem, "error");
   // If SETUP_TOKEN is set, first-run setup needs it. Stops a stranger claiming a fresh install.
   const required = process.env.SETUP_TOKEN;
-  if (required && String(form.get("setup_token") ?? "") !== required) flash("/setup", "That setup token is not correct.", "error");
+  if (required) {
+    if (rateLimited(`setup:${await clientIp()}`, 10)) flash("/setup", "Too many attempts. Wait 15 minutes and try again.", "error");
+    if (!sameSecret(String(form.get("setup_token") ?? ""), required)) flash("/setup", "That setup token is not correct.", "error");
+  }
   setSetting("company_name", company);
   const res = run("INSERT INTO users (email, name, password_hash, role, last_seen_at) VALUES (?,?,?, 'founder', datetime('now'))", email, name, hashPassword(password));
   await createSession(Number(res.lastInsertRowid), false);
