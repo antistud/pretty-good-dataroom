@@ -226,11 +226,11 @@ export function issueLoginCode(userId: number): string {
 }
 
 /** Wrong guesses allowed per person per day, across every code and every restart. */
-const DAILY_WRONG_GUESSES = 30;
+const DAILY_WRONG_GUESSES = 15;
 
 /**
  * True when someone has entered too many wrong codes for this account in the
- * last day. Six digits is a million possibilities; capping guesses at thirty a
+ * last day. Six digits is a million possibilities; capping guesses at fifteen a
  * day keeps the chance of guessing one negligible however patient the attacker.
  */
 export function signInPaused(userId: number): boolean {

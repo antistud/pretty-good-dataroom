@@ -43,7 +43,7 @@ curl -fsSL https://raw.githubusercontent.com/antistud/pretty-good-dataroom/main/
 
 It installs Docker if needed, asks for your email (SMTP) settings, starts the app behind HTTPS, schedules a nightly backup, and prints your address and a setup token. Open the address, enter the token, and create the first founder account.
 
-**Email is required.** People sign in with a code sent by email, so the room stays closed until it can send mail. Have SMTP details from any email service ready (Resend, Postmark, SendGrid, Amazon SES, Google Workspace…). If email ever breaks and you are locked out, `sudo /opt/dataroom/install.sh code you@example.com` issues a sign-in code on the server.
+**Email is required.** People sign in with a code sent by email, so the room stays closed until it can send mail. Have SMTP details from any email service ready (Resend, Postmark, SendGrid, Amazon SES, Google Workspace…). If someone cannot sign in (email not arriving, sign-in paused after wrong codes, a lost authenticator), see [docs/locked-out.md](docs/locked-out.md).
 
 Run `sudo /opt/dataroom/install.sh` again at any time to update; settings and data are kept. Step-by-step for DigitalOcean: [docs/digitalocean.md](docs/digitalocean.md).
 

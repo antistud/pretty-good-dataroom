@@ -15,6 +15,8 @@ import { formStr } from "@/lib/format";
 import { escapeHtml, mailEnabled, sendMail } from "@/lib/mail";
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+/** Where the "cannot sign in" instructions live. Forks can point this at their own copy. */
+const HELP_URL = process.env.HELP_URL || "https://github.com/antistud/pretty-good-dataroom/blob/main/docs/locked-out.md";
 
 export async function setupAction(form: FormData) {
   if (!mailEnabled()) redirect("/email-needed");
@@ -77,7 +79,7 @@ export async function verifyCodeAction(form: FormData) {
     void sendMail(
       email!,
       `Sign-in to ${getSetting("company_name")} is paused for 24 hours`,
-      `<p>Hi ${escapeHtml((who?.name ?? "").split(/\s+/)[0])},</p><p>Someone entered the wrong sign-in code for your account many times today, so sign-in for this email is paused for 24 hours. Nobody got in.</p><p>If that was you, try again tomorrow. If you need access sooner, ask the person who runs the data room. If it was not you, there is nothing you need to do.</p>`,
+      `<p>Hi ${escapeHtml((who?.name ?? "").split(/\s+/)[0])},</p><p>Someone entered the wrong sign-in code for your account 15 times today, so sign-in for this email is paused for 24 hours. Nobody got in, and nothing has been lost.</p><p><strong>If that was you:</strong> it will work again tomorrow. To get in sooner, ask the person who runs this data room to lift the pause; it takes them one command.</p><p><strong>If it was not you:</strong> there is nothing you need to do. Nobody can sign in without the code that is sent to this inbox.</p><p style="color:#6d6b65">If you run this data room, the command and the full explanation are here: <a href="${HELP_URL}" style="color:#1f5c45">${HELP_URL}</a></p>`,
       undefined,
       { transactional: true },
     );

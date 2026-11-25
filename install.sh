@@ -4,7 +4,7 @@
 #   Fresh server:   curl -fsSL https://raw.githubusercontent.com/antistud/pretty-good-dataroom/main/install.sh | sudo bash -s -- room.example.com
 #   Update:         sudo /opt/dataroom/install.sh
 #   Backup now:     sudo /opt/dataroom/install.sh backup
-#   Locked out:     sudo /opt/dataroom/install.sh code you@example.com
+#   Cannot sign in: sudo /opt/dataroom/install.sh unlock|code|reset-2fa you@example.com   (see docs/locked-out.md)
 #
 # People sign in with a code sent by email, so the room needs SMTP settings.
 # The script asks for them, or reads SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
@@ -41,11 +41,13 @@ backup() {
 }
 
 if [ "${1:-}" = "backup" ]; then backup; exit 0; fi
-if [ "${1:-}" = "code" ]; then
-  [ -n "${2:-}" ] || die "Give the email address, for example: install.sh code you@example.com"
-  cd "$DIR" && docker compose exec -T dataroom node scripts/login-code.js "$2"
-  exit $?
-fi
+case "${1:-}" in
+  unlock|code|reset-2fa)
+    [ -n "${2:-}" ] || die "Give the email address, for example: install.sh $1 you@example.com"
+    cd "$DIR" && docker compose exec -T dataroom node scripts/account.js "$1" "$2"
+    exit $?
+    ;;
+esac
 
 # ---- 1. Docker ----
 if ! command -v docker >/dev/null 2>&1; then

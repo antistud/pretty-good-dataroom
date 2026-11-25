@@ -56,7 +56,7 @@ ssh root@YOUR_DROPLET_IP grep SETUP_TOKEN /opt/dataroom/.env
 |---|---|
 | Update to the latest version | `/opt/dataroom/install.sh` |
 | Change email settings | edit `/opt/dataroom/.env`, change the `SMTP_` lines, then `/opt/dataroom/install.sh` |
-| Get in when email is down | `/opt/dataroom/install.sh code you@example.com` |
+| Someone cannot sign in | see [locked-out.md](locked-out.md): `/opt/dataroom/install.sh unlock`, `code` or `reset-2fa` followed by their email |
 | Back up right now | `/opt/dataroom/install.sh backup` |
 | See what went wrong | `cd /opt/dataroom && docker compose logs --tail 50` |
 

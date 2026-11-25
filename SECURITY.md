@@ -22,7 +22,7 @@ an attacker could do with it. You will get a reply there.
 - **No passwords.** People sign in with a six-digit code sent to their email.
   A code works once, expires after ten minutes, is replaced when a new one is
   requested and dies after five wrong guesses; only a hash is stored. An
-  account that collects thirty wrong guesses in a day has sign-in paused for
+  account that collects fifteen wrong guesses in a day has sign-in paused for
   24 hours and its owner is emailed; the count survives restarts. Requests
   and attempts are rate limited, and the sign-in screen answers the same way
   whether or not an email has access. An authenticator-app code (TOTP) can be
@@ -31,8 +31,9 @@ an attacker could do with it. You will get a reply there.
   can sign in as that person, so access is as strong as their email account
   unless they add the second step. Without SMTP configured the app serves a
   single "email is not set up" page and nothing else.
-- **Recovery.** If email is down, `install.sh code <email>` issues a code on
-  the server. Anyone able to run it already controls the server and its data.
+- **Recovery.** On the server, `install.sh unlock|code|reset-2fa <email>` lifts
+  a pause, issues a code when email is down, or clears a lost authenticator
+  (see docs/locked-out.md). Anyone able to run it already controls the server and its data.
 - **Sessions** are random tokens stored hashed, in an `HttpOnly`, `SameSite=Lax`
   cookie that is marked `Secure` when `APP_URL` is `https://`.
 - **Access levels.** Every folder, document, page, update section and built-in

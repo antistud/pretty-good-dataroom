@@ -41,7 +41,7 @@ jobs:
           docker logs dataroom-ci
           exit 1
       - name: The server-side sign-in code helper is in the image
-        run: docker exec dataroom-ci node scripts/login-code.js nobody@example.com 2>&1 | grep -q "has access"
+        run: docker exec dataroom-ci node scripts/account.js unlock nobody@example.com 2>&1 | grep -q "has access"
       - run: bash -n install.sh
 
   secrets:
