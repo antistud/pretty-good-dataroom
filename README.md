@@ -17,7 +17,7 @@ It does two jobs:
 | Documents | Folders seeded from a pre-seed template, versions, in-browser viewing, PDFs watermarked with the viewer's email, per-tier download permission |
 | Cap table and SAFEs | Holders, option pool, SAFEs (post- and pre-money, cap, discount, MFN) and a pro-forma conversion at a priced round |
 | Rounds | A step-by-step planner that asks what the money is for, works out how much to raise and at what cap from your own numbers, and explains what founders usually do. Then open, planned and closed rounds with progress, ready-to-raise and closing checklists |
-| Pipeline | Stage board, per-investor "do this next" guidance, engagement signals, diligence tracker |
+| Pipeline | Import a contact list from a CSV file, with a preview and duplicate detection. Stage board, per-investor "do this next" guidance, engagement signals, diligence tracker |
 | Updates | Monthly update with per-section audiences, preview-as, per-reader emails, founder reminders until it is published |
 | Requests | Investors ask questions or request documents, data or a call; founders work an inbox |
 | Set Me Up | A list of introductions you want, shown in the room and in every update email |

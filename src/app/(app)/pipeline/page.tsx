@@ -92,8 +92,11 @@ export default async function Pipeline({ searchParams }: { searchParams: Promise
       )}
 
       <div className="card">
-        <h2>Add a lead</h2>
-        <p className="muted small">Leads are private to you. They get no login until you invite them from their card.</p>
+        <div className="spread">
+          <h2 style={{ margin: 0 }}>Add a lead</h2>
+          <Link className="btn small" href="/pipeline/import">Import a list from a spreadsheet</Link>
+        </div>
+        <p className="muted small" style={{ marginTop: 8 }}>Leads are private to you. They get no login until you invite them from their card.</p>
         <form action={addLeadAction}>
           <div className="grid3">
             <Field label="Firm or investor name"><input name="org_name" required maxLength={120} /></Field>
