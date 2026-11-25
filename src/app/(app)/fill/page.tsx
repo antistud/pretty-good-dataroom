@@ -8,6 +8,7 @@ import { documentsPrompt, parseAnswer } from "@/lib/docfill";
 import { COMPANY_FIELDS, describe } from "@/lib/docfill-apply";
 import { Field, Flash, PageHead } from "@/components/ui";
 import { CopyButton } from "@/components/CopyButton";
+import { AssistantHelp } from "@/components/AssistantHelp";
 import { applyProposalAction, createConnectorAction, dismissProposalAction, hideConnectorAction, pasteAnswerAction, revokeConnectorAction } from "./actions";
 
 const Tick = ({ name, checked = true, children }: { name: string; checked?: boolean; children: React.ReactNode }) => (
@@ -160,10 +161,7 @@ export default async function Fill({ searchParams }: { searchParams: Promise<Rec
             ))}
           </ul>
         )}
-        <details style={{ marginTop: 14 }}>
-          <summary>Where do I put the address?</summary>
-          <p className="muted" style={{ maxWidth: "64ch" }}>In your assistant&apos;s settings, look for <strong>Connectors</strong>, <strong>Apps</strong> or <strong>MCP servers</strong>, choose to add a custom one, and paste the address. If it asks about authentication, choose &ldquo;none&rdquo; when you pasted the long address (the address itself is the key), or &ldquo;API key&rdquo; / &ldquo;bearer token&rdquo; when you used the short address and the separate key. Menus differ between assistants and change often, so search your assistant&apos;s help for &ldquo;custom connector&rdquo; or &ldquo;remote MCP server&rdquo; if you cannot find it. Some assistants only offer this on paid plans.</p>
-        </details>
+        <AssistantHelp />
       </div>
 
       <div className="card">
