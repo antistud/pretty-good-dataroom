@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
+import "@fontsource/caveat/latin-500.css";
+import "@fontsource/caveat/latin-700.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -12,8 +14,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#faf6ef" },
-    { media: "(prefers-color-scheme: dark)", color: "#171512" },
+    { media: "(prefers-color-scheme: light)", color: "#fbfaf5" },
+    { media: "(prefers-color-scheme: dark)", color: "#1d2430" },
   ],
 };
 export const dynamic = "force-dynamic";

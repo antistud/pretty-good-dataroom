@@ -16,7 +16,7 @@ export function FounderNote({ kind, firstName }: { kind: "investor" | "supporter
   const names = founders.map((f) => f.name.split(/\s+/)[0]);
   const signed = names.length <= 1 ? names[0] ?? company : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
   return (
-    <div className="letter">
+    <div className="letter note">
       <p>Dear {firstName},</p>
       <div dangerouslySetInnerHTML={{ __html: renderMarkdown(custom || fallback) }} />
       <div className="sig">

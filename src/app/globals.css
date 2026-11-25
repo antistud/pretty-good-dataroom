@@ -440,3 +440,177 @@ button.busy::after { content: ""; display: inline-block; width: 12px; height: 12
 @media (display-mode: standalone) { .topbar { padding-top: calc(12px + env(safe-area-inset-top)); } }
 
 @media (max-width: 800px) { .palette-open kbd { display: none; } }
+
+/* =====================================================================
+   Conceptual Sketch. The room as a designer's notebook: dot-grid paper,
+   graphite ink, hand-lettered headings, wobbly pencil outlines, a blue
+   pencil for links and a yellow highlighter for what matters.
+   ===================================================================== */
+:root {
+  --bg: #fbfaf5; --panel: #fffefb; --ink: #2b2a28; --muted: #77736b; --line: #cfcbc0;
+  --brand: #2f5fa8; --brand-strong: #244d8c; --brand-ink: #ffffff; --soft: #eef2f8; --accent: #d9572b;
+  --ok: #2e7d4f; --ok-bg: #e8f3ea; --warn: #8a5a00; --warn-bg: #fff3c4; --bad: #b93a2c; --bad-bg: #fbe8e4;
+  --marker: #ffe66d; --pencil: #3a3936; --dot: #d9d5c9;
+  --serif: "Caveat", "Segoe Print", "Bradley Hand", "Comic Sans MS", cursive;
+  --wobble: 255px 14px 225px 14px / 14px 225px 14px 255px;
+  --wobble-2: 14px 225px 14px 255px / 255px 14px 225px 14px;
+  --shadow: 3px 4px 0 rgba(43, 42, 40, 0.1);
+}
+:root[data-theme="light"] {
+  --bg: #fbfaf5; --panel: #fffefb; --ink: #2b2a28; --muted: #77736b; --line: #cfcbc0;
+  --brand: #2f5fa8; --brand-strong: #244d8c; --brand-ink: #ffffff; --soft: #eef2f8; --accent: #d9572b;
+  --ok: #2e7d4f; --ok-bg: #e8f3ea; --warn: #8a5a00; --warn-bg: #fff3c4; --bad: #b93a2c; --bad-bg: #fbe8e4;
+  --marker: #ffe66d; --pencil: #3a3936; --dot: #d9d5c9; --shadow: 3px 4px 0 rgba(43, 42, 40, 0.1);
+}
+/* Dark is a chalkboard: chalk lines on slate. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1d2430; --panel: #232b39; --ink: #eef0f2; --muted: #9aa4b2; --line: #45505f;
+    --brand: #9cc3ff; --brand-strong: #b9d5ff; --brand-ink: #18202b; --soft: #283243; --accent: #ffa27a;
+    --ok: #9bd8ad; --ok-bg: #22352c; --warn: #ffd978; --warn-bg: #3d3519; --bad: #ff9d90; --bad-bg: #43231f;
+    --marker: #6b5b12; --pencil: #dfe3e8; --dot: #323c4b; --shadow: 3px 4px 0 rgba(0, 0, 0, 0.3);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1d2430; --panel: #232b39; --ink: #eef0f2; --muted: #9aa4b2; --line: #45505f;
+  --brand: #9cc3ff; --brand-strong: #b9d5ff; --brand-ink: #18202b; --soft: #283243; --accent: #ffa27a;
+  --ok: #9bd8ad; --ok-bg: #22352c; --warn: #ffd978; --warn-bg: #3d3519; --bad: #ff9d90; --bad-bg: #43231f;
+  --marker: #6b5b12; --pencil: #dfe3e8; --dot: #323c4b; --shadow: 3px 4px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Dot-grid paper. */
+body { background-color: var(--bg); background-image: radial-gradient(var(--dot) 1.1px, transparent 1.2px); background-size: 22px 22px; }
+.side, .topbar, .tabbar { background-color: var(--bg); }
+
+/* Hand lettering. Caveat runs small, so sizes go up; italics are switched off because the face is already cursive. */
+h1 { font: 700 50px/1.05 var(--serif); letter-spacing: 0; }
+h2 { font: 700 31px/1.15 var(--serif); margin-bottom: 8px; }
+h3 { font: 700 23px/1.2 var(--serif); }
+.side .brand { font: 700 30px/1.1 var(--serif); }
+.topbar { font: 700 26px/1.1 var(--serif); }
+.page-head .sub, .welcome .sub { font: 500 24px/1.3 var(--serif) !important; font-style: normal !important; color: var(--muted); }
+.side .nav-label, .table th, .board .col h3 { font: 700 20px/1.2 var(--serif); font-style: normal; color: var(--muted); }
+.stat { font: 700 44px/1 var(--serif); }
+.letter { font: 17.5px/1.7 var(--sans); }
+.letter.note > p:first-child { font: 700 30px/1.2 var(--serif); }
+.letter .sig { font: 700 28px/1 var(--serif); font-style: normal; color: var(--ink); }
+.empty { font: 500 23px/1.4 var(--serif); font-style: normal; }
+blockquote.thought { font: 500 30px/1.25 var(--serif); font-style: normal; }
+details.card > summary { font: 700 25px/1.2 var(--serif); }
+.todo li::before { font: 700 30px/0.9 var(--serif); }
+.cheer-toast { font: 700 24px/1.2 var(--serif); }
+.journey .stop { font: 500 19px/1.2 var(--serif); }
+.garden a span { font: 500 18px/1.1 var(--serif); }
+.garden a small { font-size: 11.5px; }
+
+/* Headline underline, drawn twice like a quick pencil stroke. */
+.page-head h1, .welcome h1 { display: inline-block; padding-bottom: 6px; background:
+  linear-gradient(var(--pencil), var(--pencil)) left 0 bottom 3px / 100% 2px no-repeat,
+  linear-gradient(var(--pencil), var(--pencil)) left 6px bottom 0 / 62% 1.5px no-repeat; }
+strong, b { background: linear-gradient(transparent 58%, var(--marker) 58%, var(--marker) 92%, transparent 92%); padding: 0 2px; }
+.step-title, .field > span strong, .hint strong:first-child, .side .me strong, .board .lead strong, .table td strong, label strong { background: none; padding: 0; }
+
+/* Sections are ruled off with a dashed pencil line. */
+.card { border-top: 1.5px dashed var(--line); }
+hr { border-top: 1.5px dashed var(--line); }
+.side { border-right: 1.5px dashed var(--line); }
+.side .me { border-top: 1.5px dashed var(--line); }
+.table th { border-bottom: 2px solid var(--pencil); }
+.table td, .quiet-list li, .todo li { border-bottom-style: dashed; }
+.steps li + li { border-top-style: dashed; }
+.table tfoot td { border-top: 2px solid var(--pencil); }
+
+/* Anything you can press or type in is outlined by hand. */
+.btn { border: 2px solid var(--pencil); border-radius: var(--wobble); background: var(--panel); color: var(--ink); font: 700 21px/1.1 var(--serif); padding: 8px 20px; box-shadow: var(--shadow); }
+.btn:hover { border-color: var(--pencil); transform: translate(-1px, -2px) rotate(-0.6deg); box-shadow: 5px 6px 0 rgba(43, 42, 40, 0.14); }
+.btn:active { transform: translate(2px, 3px); box-shadow: none; }
+.btn.primary { background: var(--marker); border-color: var(--pencil); color: #2b2a28; }
+.btn.primary:hover { background: var(--marker); border-color: var(--pencil); box-shadow: 5px 6px 0 rgba(43, 42, 40, 0.18); }
+.btn.small { font-size: 18px; padding: 4px 13px; border-width: 1.5px; border-radius: var(--wobble-2); box-shadow: 2px 3px 0 rgba(43, 42, 40, 0.09); }
+.btn.big { font-size: 26px; padding: 11px 28px; border-radius: var(--wobble); }
+.btn.danger { color: var(--bad); border-color: var(--bad); }
+input[type=text], input[type=email], input[type=password], input[type=number], input[type=date], input[type=month], input[type=url], input:not([type]), select, textarea {
+  border: 1.5px solid var(--pencil); border-radius: var(--wobble-2); background: var(--panel);
+}
+textarea { border-radius: 14px 6px 16px 5px / 6px 16px 5px 14px; }
+input:focus, select:focus, textarea:focus { border-color: var(--brand); box-shadow: 3px 4px 0 color-mix(in srgb, var(--brand) 25%, transparent); }
+.field > span { font: 700 20px/1.2 var(--serif); }
+.palette-open { border: 1.5px solid var(--pencil); border-radius: var(--wobble-2); }
+.palette { border: 2px solid var(--pencil); border-radius: 18px 8px 20px 6px / 8px 20px 6px 18px; box-shadow: 8px 10px 0 rgba(0, 0, 0, 0.18); }
+.palette li.on { background: var(--marker); color: #2b2a28; }
+.palette li.on em, .palette li.on small { color: #55524a; }
+kbd { border-color: var(--pencil); }
+.center .card { border: 2px solid var(--pencil); border-radius: 22px 8px 26px 10px / 10px 26px 8px 22px; box-shadow: 7px 9px 0 rgba(43, 42, 40, 0.12); }
+.theme-switch { border: 1.5px solid var(--pencil); border-radius: var(--wobble-2); }
+.theme-switch button.on { background: var(--marker); color: #2b2a28; }
+
+/* Notes: a sticky note stuck on at a slight angle. */
+.hint { background: var(--warn-bg); border: 0; border-radius: 3px 14px 4px 18px / 14px 4px 18px 3px; padding: 14px 20px 14px; font: 500 22px/1.35 var(--serif); font-style: normal; color: var(--ink); max-width: 62ch; transform: rotate(-0.5deg); box-shadow: 3px 5px 0 rgba(43, 42, 40, 0.1); position: relative; }
+.hint::before { display: block; content: ""; position: absolute; left: 50%; top: -9px; width: 74px; height: 18px; translate: -50% 0; rotate: 2deg; background: color-mix(in srgb, var(--line) 55%, transparent); border-radius: 2px; animation: none; box-shadow: none; }
+.hint strong:first-child { font: 700 24px/1.1 var(--serif); letter-spacing: 0; color: var(--accent); text-transform: none; }
+.hint .btn { font-size: 19px; }
+.card .hint { background: var(--warn-bg); }
+.notice { border: 1.5px solid currentColor; border-radius: var(--wobble-2); font: 500 21px/1.3 var(--serif); }
+.banner { font: 500 21px/1.3 var(--serif); border-bottom: 1.5px dashed var(--warn); }
+
+/* Marks: ticks, dots and progress are scribbled, not rendered. */
+.badge { font: 500 18px/1.2 var(--serif); }
+.badge::before { width: 9px; height: 8px; border-radius: 60% 40% 55% 45%; }
+.count { border-radius: 60% 45% 55% 50%; font-family: var(--sans); }
+.steps .tick { border: 2px solid var(--pencil); border-radius: 55% 45% 50% 48% / 48% 52% 46% 54%; background: var(--panel); }
+.steps li.done .tick { background: none; border-color: var(--pencil); color: var(--ok); font: 700 26px/0.6 var(--serif); overflow: visible; }
+.steps li.next .tick { border-color: var(--accent); box-shadow: none; }
+.steps li.next .step-title::after { font: 700 20px var(--serif); }
+.progress { height: 16px; background: none; border: 1.5px solid var(--pencil); border-radius: var(--wobble-2); }
+.progress > div { border-radius: 0; background: repeating-linear-gradient(-55deg, var(--brand) 0 2px, transparent 2px 6px); }
+.progress .second { background: repeating-linear-gradient(-55deg, var(--accent) 0 3px, color-mix(in srgb, var(--accent) 35%, transparent) 3px 5px); border-right: 1.5px solid var(--pencil); }
+.journey .stop::before { height: 0; background: none !important; border-top: 2px dashed var(--line); }
+.journey .stop.done::before, .journey .stop.here::before { border-top-color: var(--pencil); }
+.journey .dot { border: 2px solid var(--pencil); border-radius: 55% 45% 50% 48% / 48% 52% 46% 54%; }
+.journey .stop.done .dot { background: var(--panel); color: var(--ok); border-color: var(--pencil); font: 700 22px/0.7 var(--serif); }
+.journey .stop.here .dot { border-color: var(--accent); box-shadow: none; background: var(--marker); }
+.ring { background: conic-gradient(var(--pencil) calc(var(--p) * 1%), var(--line) 0); }
+.avatar { border: 2px solid var(--pencil); border-radius: 55% 45% 50% 48% / 48% 52% 46% 54%; background: var(--marker); color: #2b2a28; font: 700 19px/1 var(--serif); }
+
+/* The pipeline is index cards on a corkboard grid. */
+.board .col { border: 1.5px dashed var(--line); border-radius: 12px 5px 14px 6px / 6px 14px 5px 12px; }
+.board .lead { border: 1.5px solid var(--pencil); border-radius: 6px 12px 5px 14px / 12px 5px 14px 6px; box-shadow: var(--shadow); }
+.board .lead:nth-child(odd) { rotate: -0.6deg; }
+.board .lead:nth-child(even) { rotate: 0.5deg; }
+.board .lead:hover { border-color: var(--pencil); rotate: 0deg; }
+.board .lead strong { font: 700 23px/1.1 var(--serif); }
+.board .col.over { border: 2px dashed var(--brand); }
+.garden { border-bottom: 2.5px solid var(--pencil); border-radius: 0 0 40% 60% / 0 0 6px 4px; }
+.template { border: 1.5px solid var(--pencil); border-radius: 4px 12px 5px 14px / 12px 5px 14px 4px; background: var(--panel); }
+.viewer { border: 2px solid var(--pencil); border-radius: 6px; box-shadow: 6px 8px 0 rgba(43, 42, 40, 0.12); }
+.side nav a.active::before { width: 9px; height: 8px; border-radius: 60% 40% 55% 45%; }
+.side nav a.active { width: fit-content; padding-right: 14px; background: linear-gradient(transparent 52%, var(--marker) 52%, var(--marker) 88%, transparent 88%); }
+.tabbar { border-top: 1.5px dashed var(--line); }
+.tabbar a, .tabbar button { font: 700 15px/1.1 var(--serif); }
+.cheer-toast { border: 2px solid var(--pencil); border-radius: var(--wobble); background: var(--marker); color: #2b2a28; box-shadow: 5px 6px 0 rgba(0, 0, 0, 0.2); }
+a { text-decoration: underline; text-decoration-style: wavy; text-decoration-color: color-mix(in srgb, var(--brand) 45%, transparent); text-decoration-thickness: 1px; text-underline-offset: 4px; }
+.side nav a, .btn, .tabbar a, .board .lead, .garden a, .topbar a, a.btn:hover { text-decoration: none; }
+.linkbtn { text-decoration: underline wavy color-mix(in srgb, var(--brand) 45%, transparent) 1px; text-underline-offset: 4px; }
+
+@media (max-width: 800px) {
+  h1 { font-size: 40px; }
+  h2 { font-size: 28px; }
+  .page-head .sub, .welcome .sub { font-size: 21px !important; }
+  .hint { font-size: 20px; transform: none; }
+  .btn { padding: 10px 18px; }
+  .btn.small { padding: 7px 13px; }
+  .board .lead { rotate: 0deg !important; }
+}
+
+.welcome h1 { font-size: 50px; }
+.side nav a { padding: 4px 10px; }
+.side .nav-label { padding: 10px 10px 0; }
+.side .brand-sub { padding-bottom: 12px; }
+.garden a { width: 82px; }
+.garden a span { max-width: 80px; }
+@media (max-width: 800px) {
+  .welcome h1 { font-size: 38px; }
+  .side nav a { padding: 10px; font-size: 18px; }
+  .side nav a.active { width: fit-content; }
+  .garden a { width: 25%; }
+}
