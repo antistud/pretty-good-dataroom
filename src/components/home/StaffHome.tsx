@@ -23,7 +23,7 @@ export default async function StaffHome({ me }: { me: Viewer }) {
     { title: "Describe the company", help: "A few paragraphs on the Overview page: what you do, for whom, and why now. This is the first thing every investor reads.", href: "/overview", done: getSetting("overview_md").trim().length > 0 },
     { title: "Upload your deck", help: "Put it in the Pitch folder under Documents. Teaser-level investors see this folder first.", href: "/documents", done: count("SELECT COUNT(*) AS n FROM documents") > 0 },
     { title: "Fill in the cap table", help: "Add founders, any other holders and the option pool. Takes five minutes and powers the SAFE conversion maths.", href: "/captable", done: count("SELECT COUNT(*) AS n FROM holders") > 0 },
-    { title: "Create your round", help: "Target amount, SAFE cap and discount. Commitments in the pipeline attach to these terms.", href: "/rounds", done: count("SELECT COUNT(*) AS n FROM rounds") > 0 },
+    { title: "Create your round", help: "Target amount, SAFE cap and discount. Commitments in the pipeline attach to these terms.", href: "/rounds/new", done: count("SELECT COUNT(*) AS n FROM rounds") > 0 },
     { title: "Add your first lead", help: "Anyone you might raise from. Their card then walks you through every step to a wire.", href: "/pipeline", done: count("SELECT COUNT(*) AS n FROM leads") > 0 },
     { title: "Write your first investor update", help: "A short monthly note. Investors who hear from you regularly are the ones who help.", href: "/updates", done: count("SELECT COUNT(*) AS n FROM updates") > 0 },
   ];
@@ -127,7 +127,7 @@ export default async function StaffHome({ me }: { me: Viewer }) {
               {leads.length > 0 ? <>, and {leads.length} conversation{leads.length === 1 ? "" : "s"} still alive</> : null}.
             </>
           ) : (
-            <>There is no round set up yet; <Link href="/rounds">that is a good place to begin</Link>.</>
+            <>There is no round set up yet; <Link href="/rounds/new">planning one takes a few minutes</Link>.</>
           )}
         </p>
         {round && target > 0 && (

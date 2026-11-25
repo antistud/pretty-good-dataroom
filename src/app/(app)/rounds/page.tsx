@@ -16,7 +16,7 @@ export default async function Rounds({ searchParams }: { searchParams: Promise<R
     <>
       <PageHead title="Rounds" sub="Each raise is its own round: the one you are doing now, and the ones you are planning." />
       <Flash sp={await searchParams} />
-      <Hint title={rounds.length ? "How rounds work" : "Start here: create your round"}>
+      <Hint title="How rounds work">
         A round moves through four steps. <strong>Planning</strong>: get ready, nobody outside sees it. <strong>Open</strong>: investors with access see the terms. <strong>Closing</strong>: collecting signatures and wires. <strong>Closed</strong>: done. Each round has a checklist that tells you what to do next.
       </Hint>
 
@@ -42,12 +42,17 @@ export default async function Rounds({ searchParams }: { searchParams: Promise<R
       })}
 
       <div className="card">
-        <h2>{rounds.length ? "Plan another round" : "Create your first round"}</h2>
-        <p className="muted">Fill in what you know. You can change everything later, and nothing is visible to investors until you open the round.</p>
-        <form action={createRoundAction}>
-          <RoundFields />
-          <button className="btn primary">Create round</button>
-        </form>
+        <h2>{rounds.length ? "Plan another round" : "Plan your first round"}</h2>
+        <p style={{ maxWidth: "62ch" }}>Six short questions: what the money is for, how much, on what terms. Each one explains what founders usually do and works out a suggestion from your own numbers.</p>
+        <p><Link className="btn primary" href="/rounds/new">Plan a round, step by step</Link></p>
+        <details>
+          <summary>I already know my terms</summary>
+          <p className="muted">Fill in what you know. You can change everything later, and nothing is visible to investors until you open the round.</p>
+          <form action={createRoundAction}>
+            <RoundFields />
+            <button className="btn">Create round</button>
+          </form>
+        </details>
       </div>
     </>
   );
