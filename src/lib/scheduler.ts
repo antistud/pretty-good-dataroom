@@ -93,7 +93,7 @@ async function inviteNudges(now: Date) {
     await sendMail(
       inv.email,
       `Reminder: your invitation to the ${company} data room`,
-      `<p>Hi${inv.name ? " " + escapeHtml(inv.name) : ""},</p><p>${escapeHtml(inv.inviter ?? "The team")} invited you to ${escapeHtml(company)}'s data room a few days ago. It takes about a minute: click below, choose a password, and the first screen tells you exactly what to look at.</p><p>This is a fresh link; the earlier one no longer works. It expires in ${INVITE_DAYS} days. We will not remind you again.</p>`,
+      `<p>Hi${inv.name ? " " + escapeHtml(inv.name) : ""},</p><p>${escapeHtml(inv.inviter ?? "The team")} invited you to ${escapeHtml(company)}'s data room a few days ago. The link below is a fresh one, in case the first went astray. No hurry.</p><p>This is a fresh link; the earlier one no longer works. It expires in ${INVITE_DAYS} days. We will not remind you again.</p>`,
       { label: "Accept invitation", url: `${appUrl()}/invite/${token}` },
     );
   }

@@ -6,6 +6,7 @@ import { getDocument } from "@/lib/docs";
 import { logActivity } from "@/lib/activity";
 import { escapeHtml, sendMail } from "@/lib/mail";
 import { flash } from "@/lib/flash";
+import { humanDay } from "@/lib/pipeline";
 import { notify, orgMemberIds, replyToFounder, staffIds } from "@/lib/notify";
 import { formStr } from "@/lib/format";
 
@@ -42,15 +43,17 @@ export async function createRequestAction(form: FormData) {
   const body = formStr(form.get("body"), 5000);
   if (!KINDS.includes(kind)) flash("/requests", "Choose what kind of request this is.", "error");
   if (!title) flash("/requests", "Give your request a short title.", "error");
-  const res = run("INSERT INTO requests (org_id, user_id, kind, title, body) VALUES (?,?,?,?,?)", me.orgId, me.id, kind, title, body || null);
+  const rawDate = String(form.get("needed_by") ?? "");
+  const neededBy = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : null;
+  const res = run("INSERT INTO requests (org_id, user_id, kind, title, body, needed_by) VALUES (?,?,?,?,?,?)", me.orgId, me.id, kind, title, body || null, neededBy);
   const id = Number(res.lastInsertRowid);
   logActivity(me, "request.create", "request", id, `${kind}: ${title}`);
   await mailStaff(
-    `New ${kind} request from ${me.orgName ?? me.name}: ${title}`,
+    `${me.orgName ?? me.name} ${kind === "question" ? "asks" : "would like"}: ${title}${neededBy ? ` (by ${humanDay(neededBy).replace(/^on /, "")})` : ""}`,
     `<p><strong>${escapeHtml(me.name)}</strong>${me.orgName ? ` (${escapeHtml(me.orgName)})` : ""} sent a request in the ${escapeHtml(getSetting("company_name"))} data room.</p><p><strong>${escapeHtml(title)}</strong></p>${body ? `<p>${escapeHtml(body).replace(/\n/g, "<br>")}</p>` : ""}`,
     `${appUrl()}/requests/${id}`,
   );
-  flash(`/requests/${id}`, "Sent. The founders have been told, and their reply will appear here.");
+  flash(`/requests/${id}`, neededBy ? "Sent. The founders know what you need and when you need it." : "Sent. The founders have been told, and their reply will appear here.");
 }
 
 export async function replyAction(form: FormData) {

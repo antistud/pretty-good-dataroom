@@ -25,37 +25,12 @@ export default async function SupporterHome({ me }: { me: Viewer }) {
       <FounderNote kind="supporter" firstName={me.name.split(" ")[0]} />
 
       <div className="card">
-        <h2>Do this first</h2>
-        <ol className="steps">
-          <li className={latest ? "next" : ""}>
-            <span className="tick">✓</span>
-            <div className="step-body">
-              <div className="step-title">Read the latest update</div>
-              <div className="muted small">{latest ? `${latest.title} · ${monthLabel(latest.period)}` : "Nothing published yet. You will get an email when the first one is out."}</div>
-            </div>
-            {latest && <Link className="btn small primary" href={`/updates/${latest.id}`}>Read it</Link>}
-          </li>
-          {canSeeSection(me, "intros") && (
-            <li>
-              <span className="tick">✓</span>
-              <div className="step-body">
-                <div className="step-title">See who the founders want to meet</div>
-                <div className="muted small">If a name or a type of person rings a bell, press “I can intro”. It takes one minute.</div>
-              </div>
-              <Link className="btn small" href="/intros">Open Set Me Up</Link>
-            </li>
-          )}
-          {canSeeSection(me, "team") && (
-            <li>
-              <span className="tick">✓</span>
-              <div className="step-body">
-                <div className="step-title">Meet the team</div>
-                <div className="muted small">Who is building {company}.</div>
-              </div>
-              <Link className="btn small" href="/team">Meet the team</Link>
-            </li>
-          )}
-        </ol>
+        <h2>The latest from us</h2>
+        {latest ? (
+          <p><Link href={`/updates/${latest.id}`}>{latest.title}</Link> <span className="muted small">· {monthLabel(latest.period)}</span></p>
+        ) : (
+          <p className="muted">Nothing published yet. We will email you when the first update is out.</p>
+        )}
       </div>
 
       {canSeeSection(me, "intros") && (

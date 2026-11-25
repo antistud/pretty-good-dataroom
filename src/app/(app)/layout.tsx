@@ -22,7 +22,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const show = (s: Parameters<typeof canSeeSection>[1]) => canSeeSection(me, s);
 
   const jump: PaletteItem[] = [
-    { label: me.isStaff ? "Today" : "Start here", href: "/home", kind: "Go to" },
+    { label: me.isStaff ? "Today" : "Home", href: "/home", kind: "Go to" },
     ...(me.isStaff
       ? [
           { label: "Founder guide", href: "/guide", kind: "Go to" },
@@ -55,7 +55,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         { label: "Updates", href: "/updates", icon: "mail" },
       ]
     : [
-        { label: "Start", href: "/home", icon: "home" },
+        { label: "Home", href: "/home", icon: "home" },
         ...(show("documents") ? [{ label: "Documents", href: "/documents", icon: "doc" } as Tab] : []),
         ...(show("updates") ? [{ label: "Updates", href: "/updates", icon: "mail" } as Tab] : []),
         ...(show("requests") ? [{ label: "Ask", href: "/requests", icon: "chat" } as Tab] : show("intros") ? [{ label: "Help", href: "/intros", icon: "people" } as Tab] : []),
@@ -76,7 +76,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="brand-sub">{me.isStaff ? "Founder workspace" : me.role === "supporter" ? "Supporter updates" : "Investor data room"}</div>
         <Palette nav={jump} />
         <nav>
-          <NavLink href="/home">{me.isStaff ? "Today" : "Start here"}</NavLink>
+          <NavLink href="/home">{me.isStaff ? "Today" : "Home"}</NavLink>
           <NavLink href="/notifications"><span className="bell" style={{ flex: 1 }}>What&apos;s new {unread > 0 && <span className="count">{unread}</span>}</span></NavLink>
           {me.isStaff && (
             <>

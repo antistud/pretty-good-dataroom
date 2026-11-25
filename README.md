@@ -4,7 +4,7 @@ A self-hosted data room and fundraising workspace for pre-seed startups. One Doc
 
 It does two jobs:
 
-- **For investors and supporters:** a guided room that tells them exactly what to look at next, monthly updates, a way to ask for things, and a way to offer introductions.
+- **For investors and supporters:** a room that shows them what is there and asks what they need and by when, monthly updates, a way to ask for things, and a way to offer introductions.
 - **For founders:** a small CRM that walks each investor from first contact to wire, keeps their access in step with their stage, and nags you to send the monthly update.
 
 ## What's in it
@@ -21,7 +21,7 @@ It does two jobs:
 | Updates | Monthly update with per-section audiences, preview-as, per-reader emails, founder reminders until it is published |
 | Requests | Investors ask questions or request documents, data or a call; founders work an inbox |
 | Set Me Up | A list of introductions you want, shown in the room and in every update email |
-| Guided onboarding | A "Start here" checklist for investors and a lighter welcome for supporters |
+| Investor home | A letter from the founders, what is in the room, and one question: what do you need, and by when. No checklists and no chasing |
 | Founder guide | A six-stage path through the raise, a daily note, a room health score and ready-to-edit wording for each message you need to send |
 | Delight | An at-a-glance view of where every investor stands, drag-and-drop pipeline, search and jump (Ctrl/Cmd+K), light and dark themes, a quiet celebration when money lands |
 | Notifications | A "What's new" inbox for everyone, with matching emails each person can switch on or off by topic |

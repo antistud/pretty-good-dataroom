@@ -38,7 +38,7 @@ export function templatesFor(lead: LeadLite, founderName: string): Template[] {
     invite: {
       key: "invite", title: "Invitation to the room", when: "Send with (or right after) their invite link.",
       subject: `${company}: your data room access`,
-      body: `Hi ${first},\n\nGood to hear you'd like to look closer. I've set up access to our data room for you. The first screen walks you through what to read, in order, and it takes about 20 minutes.\n\n[paste their invite link]\n\nYou can ask questions or request anything missing from inside the room, and invite colleagues yourself.\n\n${me}`,
+      body: `Hi ${first},\n\nGood to hear you'd like to look closer. I've set up access to our data room for you. Everything is there to look at in your own time.\n\n[paste their invite link]\n\nIf you need anything that is not there, tell me what and when you need it by. You can add colleagues yourself.\n\n${me}`,
     },
     afterMeeting: {
       key: "afterMeeting", title: "After the meeting", when: "Same day as the call.",

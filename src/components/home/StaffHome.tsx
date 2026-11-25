@@ -46,7 +46,14 @@ export default async function StaffHome({ me }: { me: Viewer }) {
     else if (due.daysUntilDue <= 7) items.push({ text: `The ${monthLabel(due.period)} investor update is due ${due.daysUntilDue === 0 ? "today" : `in ${due.daysUntilDue} day${due.daysUntilDue === 1 ? "" : "s"}`}.`, href: "/updates", cta: due.draftId ? "Finish the draft" : "Start it", urgent: due.daysUntilDue <= 1 });
   }
 
-  const openRequests = count("SELECT COUNT(*) AS n FROM requests WHERE status IN ('open','in_progress')");
+  const dated = q<{ id: number; title: string; needed_by: string; org: string | null }>(
+    `SELECT r.id, r.title, r.needed_by, o.name AS org FROM requests r LEFT JOIN orgs o ON o.id = r.org_id
+      WHERE r.status IN ('open','in_progress') AND r.needed_by IS NOT NULL ORDER BY r.needed_by LIMIT 5`,
+  );
+  for (const r of dated) {
+    items.push({ text: `${r.org ?? "An investor"} needs "${r.title}" ${humanDay(r.needed_by)}.`, href: `/requests/${r.id}`, cta: "Open it", urgent: r.needed_by <= new Date(Date.now() + 2 * 86400_000).toISOString().slice(0, 10) });
+  }
+  const openRequests = count("SELECT COUNT(*) AS n FROM requests WHERE status IN ('open','in_progress') AND needed_by IS NULL");
   if (openRequests) items.push({ text: `${openRequests} investor request${openRequests === 1 ? " is" : "s are"} waiting for an answer.`, href: "/requests", cta: "Open requests", urgent: true });
 
   const offers = count("SELECT COUNT(*) AS n FROM intro_offers WHERE status = 'offered'");

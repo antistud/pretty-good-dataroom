@@ -20,7 +20,7 @@ export default async function Invite({ params, searchParams }: { params: Promise
       <h1>Welcome to {company}</h1>
       <p className="muted" style={{ marginTop: 6 }}>
         You are joining as {invite.role === "supporter" ? "a supporter" : invite.role === "investor" ? "an investor" : "a team member"}
-        {invite.org_name ? <> with <strong>{invite.org_name}</strong></> : null}. One step: choose a password. After that we will show you exactly what to look at.
+        {invite.org_name ? <> with <strong>{invite.org_name}</strong></> : null}. Choose a password and you are in.
       </p>
       <Flash sp={await searchParams} />
       <form action={acceptInviteAction}>

@@ -2,11 +2,12 @@ import Link from "next/link";
 import { requireSection } from "@/lib/auth";
 import { q } from "@/lib/db";
 import { ago } from "@/lib/format";
+import { humanDay } from "@/lib/pipeline";
 import { Field, Flash, Hint, PageHead } from "@/components/ui";
 import { createRequestAction, setRequestStatusAction } from "./actions";
 
 type Row = {
-  id: number; org_id: number | null; kind: string; title: string; status: string; created_at: string; updated_at: string;
+  id: number; org_id: number | null; kind: string; title: string; status: string; needed_by: string | null; created_at: string; updated_at: string;
   asker: string | null; org_name: string | null; replies: number;
 };
 
@@ -14,7 +15,7 @@ const KIND_LABEL: Record<string, string> = { question: "Question", document: "Do
 const STATUS_LABEL: Record<string, string> = { open: "Open", in_progress: "In progress", fulfilled: "Fulfilled", declined: "Declined" };
 const STATUS_BADGE: Record<string, string> = { open: "warn", in_progress: "", fulfilled: "ok", declined: "grey" };
 
-const SELECT = `SELECT r.id, r.org_id, r.kind, r.title, r.status, r.created_at, r.updated_at, u.name AS asker, o.name AS org_name,
+const SELECT = `SELECT r.id, r.org_id, r.kind, r.title, r.status, r.needed_by, r.created_at, r.updated_at, u.name AS asker, o.name AS org_name,
   (SELECT COUNT(*) FROM request_messages m WHERE m.request_id = r.id) AS replies
   FROM requests r LEFT JOIN users u ON u.id = r.user_id LEFT JOIN orgs o ON o.id = r.org_id`;
 
@@ -46,6 +47,7 @@ export default async function Requests({ searchParams }: { searchParams: Promise
               </Field>
               <Field label="In one line"><input name="title" required maxLength={200} placeholder="e.g. Customer contract with your first pilot" /></Field>
             </div>
+            <Field label="When do you need it by? (optional)" hint="So the founders can get it to you in time."><input type="date" name="needed_by" /></Field>
             <Field label="Details (optional)" hint="The more specific you are, the faster you get exactly what you need."><textarea name="body" maxLength={5000} /></Field>
             <button className="btn primary">Send to the founders</button>
           </form>
@@ -77,7 +79,7 @@ export default async function Requests({ searchParams }: { searchParams: Promise
   // Staff inbox
   const orgFilter = Number(sp.org) || 0;
   const orgs = q<{ id: number; name: string }>("SELECT DISTINCT o.id, o.name FROM orgs o JOIN requests r ON r.org_id = o.id ORDER BY o.name");
-  const rows = orgFilter ? q<Row>(`${SELECT} WHERE r.org_id = ? ORDER BY r.created_at`, orgFilter) : q<Row>(`${SELECT} ORDER BY r.created_at`);
+  const rows = orgFilter ? q<Row>(`${SELECT} WHERE r.org_id = ? ORDER BY r.needed_by IS NULL, r.needed_by, r.created_at`, orgFilter) : q<Row>(`${SELECT} ORDER BY r.needed_by IS NULL, r.needed_by, r.created_at`);
   const by = (s: string) => rows.filter((r) => r.status === s);
   const closed = rows.filter((r) => r.status === "fulfilled" || r.status === "declined").reverse();
 
@@ -89,7 +91,7 @@ export default async function Requests({ searchParams }: { searchParams: Promise
           <tr key={r.id}>
             <td><Link href={`/requests/${r.id}`}><strong>{r.title}</strong></Link><div className="muted small">{KIND_LABEL[r.kind]} · {r.replies} {r.replies === 1 ? "reply" : "replies"}</div></td>
             <td className="small"><strong>{r.org_name ?? "—"}</strong><div className="muted">{r.asker ?? "—"}</div></td>
-            <td className="small muted nowrap">{r.status === "fulfilled" || r.status === "declined" ? <span className={`badge ${STATUS_BADGE[r.status]}`}>{STATUS_LABEL[r.status]}</span> : `asked ${ago(r.created_at)}`}</td>
+            <td className="small muted nowrap">{r.status === "fulfilled" || r.status === "declined" ? <span className={`badge ${STATUS_BADGE[r.status]}`}>{STATUS_LABEL[r.status]}</span> : `${r.needed_by && r.status !== "fulfilled" && r.status !== "declined" ? `needed ${humanDay(r.needed_by)} · ` : ""}asked ${ago(r.created_at)}`}</td>
             <td className="right nowrap">
               <div className="row" style={{ justifyContent: "flex-end" }}>
                 {next.map((n) => (

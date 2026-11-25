@@ -39,7 +39,7 @@ export async function createInvite(
   const emailed = await sendMail(
     email,
     `${by.name} invited you to the ${company} data room`,
-    `<p>Hi${input.name ? " " + escapeHtml(input.name) : ""},</p><p>${escapeHtml(by.name)} has invited you to ${escapeHtml(company)}'s data room. Click below to choose a password and get started. It takes about a minute, and the first screen tells you exactly what to do.</p><p>This link works once and expires in ${INVITE_DAYS} days.</p>`,
+    `<p>Hi${input.name ? " " + escapeHtml(input.name) : ""},</p><p>${escapeHtml(by.name)} has invited you to ${escapeHtml(company)}'s data room. Click below to choose a password. Everything is there for you to look at in your own time, and you can ask us for anything you need.</p><p>This link works once and expires in ${INVITE_DAYS} days.</p>`,
     { label: "Accept invitation", url },
   );
   return { ok: true, url, emailed };

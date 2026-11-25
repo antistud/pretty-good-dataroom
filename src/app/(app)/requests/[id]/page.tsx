@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { humanDay } from "@/lib/pipeline";
 import { redirect } from "next/navigation";
 import { canSeeSection, requireUser } from "@/lib/auth";
 import { q, q1 } from "@/lib/db";
@@ -8,7 +9,7 @@ import { Field, Flash, Hint, PageHead } from "@/components/ui";
 import { replyAction } from "../actions";
 
 type Req = {
-  id: number; org_id: number | null; kind: string; title: string; body: string | null; status: string; created_at: string;
+  id: number; org_id: number | null; kind: string; title: string; body: string | null; status: string; needed_by: string | null; created_at: string;
   asker: string | null; org_name: string | null; org_kind: string | null; org_tier: number | null;
 };
 type Msg = { id: number; body: string; document_id: number | null; created_at: string; author: string | null; author_role: string | null };
@@ -21,7 +22,7 @@ export default async function RequestThread({ params, searchParams }: { params: 
   const me = await requireUser();
   const id = Number((await params).id);
   const req = q1<Req>(
-    `SELECT r.id, r.org_id, r.kind, r.title, r.body, r.status, r.created_at, u.name AS asker,
+    `SELECT r.id, r.org_id, r.kind, r.title, r.body, r.status, r.needed_by, r.created_at, u.name AS asker,
             o.name AS org_name, o.kind AS org_kind, o.tier AS org_tier
        FROM requests r LEFT JOIN users u ON u.id = r.user_id LEFT JOIN orgs o ON o.id = r.org_id WHERE r.id = ?`,
     id,
@@ -39,7 +40,7 @@ export default async function RequestThread({ params, searchParams }: { params: 
 
   return (
     <>
-      <PageHead title={req.title} sub={<>{KIND_LABEL[req.kind]} from {req.asker ?? "someone"}{me.isStaff && req.org_name ? ` at ${req.org_name}` : ""} · {fmtDateTime(req.created_at)}</>}>
+      <PageHead title={req.title} sub={<>{KIND_LABEL[req.kind]} from {req.asker ?? "someone"}{me.isStaff && req.org_name ? ` at ${req.org_name}` : ""} · {fmtDateTime(req.created_at)}{req.needed_by ? <strong> · needed {humanDay(req.needed_by)}</strong> : null}</>}>
         <span className={`badge ${STATUS_BADGE[req.status]}`}>{STATUS_LABEL[req.status]}</span>
         <Link className="btn small" href="/requests">All requests</Link>
       </PageHead>

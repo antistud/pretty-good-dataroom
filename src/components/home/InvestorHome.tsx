@@ -3,92 +3,108 @@ import { Welcome } from "@/components/Path";
 import { FounderNote } from "@/components/FounderNote";
 import type { Viewer } from "@/lib/auth";
 import { canSeeSection } from "@/lib/auth";
-import { getSetting, q } from "@/lib/db";
-import { visibleDocuments } from "@/lib/docs";
+import { q } from "@/lib/db";
+import { visibleDocuments, visibleFolders } from "@/lib/docs";
 import { ago, fmtDate, monthLabel, parseDate } from "@/lib/format";
-import { onboardingSteps, visibleUpdates } from "@/lib/onboarding";
-import { Hint } from "@/components/ui";
+import { visibleUpdates } from "@/lib/onboarding";
+import { humanDay } from "@/lib/pipeline";
+import { Field } from "@/components/ui";
 import { RaiseProgress } from "@/components/rounds";
 import { roundTotals } from "@/lib/rounds";
-import { markStepAction } from "@/app/(app)/home/actions";
+import { createRequestAction } from "@/app/(app)/requests/actions";
 
-const STATUS_LABEL: Record<string, string> = { open: "Open", in_progress: "In progress" };
+const STATUS_LABEL: Record<string, string> = { open: "With the founders", in_progress: "Being worked on" };
 
+/**
+ * An investor's home. No tasks and no progress tracking: it says what is
+ * here, and asks what they need and by when.
+ */
 export default async function InvestorHome({ me }: { me: Viewer }) {
-  const company = getSetting("company_name");
-  const momentum = canSeeSection(me, "round")
+  const see = (s: Parameters<typeof canSeeSection>[1]) => canSeeSection(me, s);
+  const momentum = see("round")
     ? q<{ id: number; name: string; status: string; target_amount: number }>(
         "SELECT id, name, status, target_amount FROM rounds WHERE status IN ('open','closing') AND min_level <= ? ORDER BY id DESC LIMIT 1",
         me.level,
       )[0]
     : undefined;
-  const steps = onboardingSteps(me);
-  const required = steps.filter((s) => !s.optional);
-  const doneCount = steps.filter((s) => s.done).length;
-  const next = required.find((s) => !s.done) ?? steps.find((s) => !s.done);
-  const allDone = required.every((s) => s.done);
-  const pctDone = steps.length ? Math.round((doneCount / steps.length) * 100) : 100;
-
-  const updates = canSeeSection(me, "updates") ? visibleUpdates(me.level, 1) : [];
+  const updates = see("updates") ? visibleUpdates(me.level, 1) : [];
   const requests =
-    me.orgId && canSeeSection(me, "requests")
-      ? q<{ id: number; title: string; status: string; updated_at: string; asker: string | null }>(
-          `SELECT r.id, r.title, r.status, r.updated_at, u.name AS asker FROM requests r LEFT JOIN users u ON u.id = r.user_id
+    me.orgId && see("requests")
+      ? q<{ id: number; title: string; status: string; needed_by: string | null; updated_at: string; asker: string | null }>(
+          `SELECT r.id, r.title, r.status, r.needed_by, r.updated_at, u.name AS asker FROM requests r LEFT JOIN users u ON u.id = r.user_id
             WHERE r.org_id = ? AND r.status IN ('open','in_progress') ORDER BY r.updated_at DESC`,
           me.orgId,
         )
       : [];
+  const docs = see("documents") ? visibleDocuments(me.level).filter((d) => d.current_version_id) : [];
+  const pitchFolder = see("documents") ? visibleFolders(me.level).find((f) => /pitch|deck/i.test(f.name)) : undefined;
+  const deck = pitchFolder ? docs.filter((d) => d.folder_id === pitchFolder.id) : [];
   const cutoff = Date.now() - 14 * 86400_000;
-  const newDocs = canSeeSection(me, "documents")
-    ? visibleDocuments(me.level)
-        .filter((d) => d.current_version_id && parseDate(d.version_created_at ?? d.created_at).getTime() > cutoff)
-        .sort((a, b) => (b.version_created_at ?? b.created_at).localeCompare(a.version_created_at ?? a.created_at))
-        .slice(0, 8)
-    : [];
+  const newDocs = docs
+    .filter((d) => parseDate(d.version_created_at ?? d.created_at).getTime() > cutoff)
+    .sort((a, b) => (b.version_created_at ?? b.created_at).localeCompare(a.version_created_at ?? a.created_at))
+    .slice(0, 8);
+
+  const here: { label: string; href: string; note: string }[] = [
+    ...(see("overview") ? [{ label: "Overview", href: "/overview", note: "What the company does and where it is today" }] : []),
+    ...(deck.length === 1 ? [{ label: "The deck", href: `/documents/${deck[0].id}`, note: deck[0].name }] : []),
+    ...(see("round") ? [{ label: "The round", href: "/round", note: "Amount, terms and how much is committed" }] : []),
+    ...(see("team") ? [{ label: "Team", href: "/team", note: "Who is building it" }] : []),
+    ...(see("captable") ? [{ label: "Cap table and SAFEs", href: "/captable", note: "Ownership today and after a priced round" }] : []),
+    ...(see("financials") ? [{ label: "Financials", href: "/financials", note: "Cash, burn and runway by month" }] : []),
+    ...(see("documents") ? [{ label: "Documents", href: "/documents", note: `${docs.length} file${docs.length === 1 ? "" : "s"} you can open` }] : []),
+    ...(see("updates") ? [{ label: "Monthly updates", href: "/updates", note: "What the founders have reported" }] : []),
+  ];
 
   return (
     <>
       <Welcome title={`Welcome, ${me.name.split(" ")[0]}`} />
       <FounderNote kind="investor" firstName={me.name.split(" ")[0]} />
 
-      <div className="card">
-        {allDone ? (
-          <>
-            <h2>You&apos;re all caught up</h2>
-            <p className="muted">You have been through everything. Here is what is new since you last looked, further down this page. If something is missing, ask for it.</p>
-            <div className="row">
-              {canSeeSection(me, "requests") && <Link className="btn primary" href="/requests">Ask or request something</Link>}
-              {canSeeSection(me, "intros") && <Link className="btn" href="/intros">Make an introduction</Link>}
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="spread">
-              <h2 style={{ margin: 0 }}>The order I would read things in</h2>
-              <span className="muted small">{doneCount} of {steps.length} done</span>
-            </div>
-            <p className="muted" style={{ marginTop: 6 }}>Each one ticks itself off as you go. Skip around if you prefer; nothing here is locked.</p>
-            {next && <p><Link className="btn primary big" href={next.href}>Next: {next.title} →</Link></p>}
-          </>
-        )}
-        <div className="progress" style={{ margin: "12px 0" }}><div style={{ width: `${pctDone}%` }} /></div>
-        <ol className="steps">
-          {steps.map((s) => (
-            <li key={s.key} className={s.done ? "done" : s === next ? "next" : ""}>
-              <span className="tick">✓</span>
-              <div className="step-body">
-                <div className="step-title"><Link href={s.href} style={{ color: "inherit" }}>{s.title}</Link>{s.optional ? <span className="muted small" style={{ fontWeight: 400 }}> · if you like</span> : null}</div>
-                <div className="muted small">{s.body}</div>
+      {see("requests") && me.orgId && (
+        <div className="card">
+          <h2>What do you need from us?</h2>
+          <p className="muted" style={{ marginTop: -4, maxWidth: "62ch" }}>A document, a number, a call, an answer. Tell us what and when you need it by, and we will work to your timing.</p>
+          <form action={createRequestAction}>
+            <div className="grid2">
+              <Field label="What you need"><input name="title" required maxLength={200} placeholder="e.g. Customer references, or a call with the CTO" /></Field>
+              <div className="grid2" style={{ gap: "0 14px", marginBottom: 0 }}>
+                <Field label="It is">
+                  <select name="kind" defaultValue="document">
+                    <option value="document">A document</option>
+                    <option value="data">Some data</option>
+                    <option value="call">A call</option>
+                    <option value="question">A question</option>
+                  </select>
+                </Field>
+                <Field label="Needed by"><input type="date" name="needed_by" /></Field>
               </div>
-              {!s.done && (
-                <form action={markStepAction}>
-                  <input type="hidden" name="key" value={s.key} />
-                  <button className="linkbtn small muted" title="Tick this off without opening it">done already</button>
-                </form>
-              )}
-            </li>
+            </div>
+            <button className="btn primary">Send to the founders</button>
+          </form>
+          {requests.length > 0 && (
+            <ul className="quiet-list" style={{ marginTop: 18 }}>
+              {requests.map((r) => (
+                <li key={r.id}>
+                  <Link href={`/requests/${r.id}`}>{r.title}</Link>{" "}
+                  <span className="muted small">
+                    · {STATUS_LABEL[r.status]}{r.needed_by ? ` · you asked for it ${humanDay(r.needed_by)}` : ""}{r.asker && r.asker !== me.name ? ` · from ${r.asker}` : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      <div className="card">
+        <h2>What is here</h2>
+        <ul className="quiet-list">
+          {here.map((h) => (
+            <li key={h.href}><Link href={h.href}>{h.label}</Link> <span className="muted">· {h.note}</span></li>
           ))}
-        </ol>
+        </ul>
+        {see("requests") && <p className="muted" style={{ marginTop: 10 }}>If something you would expect to see is not here, ask above and we will add it.</p>}
       </div>
 
       {momentum && (
@@ -101,67 +117,34 @@ export default async function InvestorHome({ me }: { me: Viewer }) {
         </div>
       )}
 
-      <div className="grid2">
+      {(updates.length > 0 || newDocs.length > 0) && (
         <div className="card">
-          <h2>Latest update</h2>
-          {updates.length === 0 ? (
-            <p className="muted">No updates published yet. The founders send one every month; you will get an email when it is out.</p>
-          ) : (
-            <>
-              <p><Link href={`/updates/${updates[0].id}`}><strong>{updates[0].title}</strong></Link></p>
-              <p className="muted small">{monthLabel(updates[0].period)} · published {fmtDate(updates[0].published_at)}</p>
-              <Link className="btn small" href="/updates">All updates</Link>
-            </>
-          )}
-        </div>
-        <div className="card">
-          <h2>Your open requests</h2>
-          {requests.length === 0 ? (
-            <p className="muted">Nothing open. {canSeeSection(me, "requests") ? <Link href="/requests">Ask a question or request a document</Link> : null}</p>
-          ) : (
-            <ul style={{ margin: 0, paddingLeft: 18 }}>
-              {requests.map((r) => (
-                <li key={r.id}>
-                  <Link href={`/requests/${r.id}`}>{r.title}</Link>{" "}
-                  <span className={`badge ${r.status === "open" ? "warn" : ""}`}>{STATUS_LABEL[r.status]}</span>
-                  <div className="muted small">{r.asker ?? "—"} · {ago(r.updated_at)}</div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
-
-      {canSeeSection(me, "documents") && (
-        <div className="card">
-          <h2>New in the last 14 days</h2>
-          {newDocs.length === 0 ? (
-            <p className="muted">No new documents. You will get an email when the founders add something.</p>
-          ) : (
-            <div className="table-wrap"><table className="table"><tbody>
-              {newDocs.map((d) => (
-                <tr key={d.id}>
-                  <td><Link href={`/documents/${d.id}`}>{d.name}</Link></td>
-                  <td className="small muted right">added {ago(d.version_created_at ?? d.created_at)}</td>
-                </tr>
-              ))}
-            </tbody></table></div>
-          )}
+          <h2>Recently added</h2>
+          <ul className="quiet-list">
+            {updates.map((u) => (
+              <li key={`u${u.id}`}><Link href={`/updates/${u.id}`}>{u.title}</Link> <span className="muted small">· update for {monthLabel(u.period)}, published {fmtDate(u.published_at)}</span></li>
+            ))}
+            {newDocs.map((d) => (
+              <li key={d.id}><Link href={`/documents/${d.id}`}>{d.name}</Link> <span className="muted small">· added {ago(d.version_created_at ?? d.created_at)}</span></li>
+            ))}
+          </ul>
         </div>
       )}
 
-      <div className="card">
-        <details>
-          <summary>New to startup investing? The five terms you will see here</summary>
-          <Hint>
+      {me.orgId && (
+        <p className="muted">Looking at this with colleagues? <Link href="/account">Add them</Link> and they will see what you see.</p>
+      )}
+
+      <details className="card">
+        <summary>Terms used in this room</summary>
+          <div>
             <p><strong>SAFE.</strong> A Simple Agreement for Future Equity. You invest money now and receive shares later, when the company raises a priced round. There is no interest and no repayment date.</p>
             <p><strong>Valuation cap.</strong> The highest company valuation at which your SAFE converts into shares. With a post-money cap, your ownership is simply your investment divided by the cap: $100,000 on a $5M cap is 2%.</p>
             <p><strong>Discount.</strong> A percentage off the next round&apos;s share price. If a SAFE has both a cap and a discount, you get whichever gives you more shares.</p>
             <p><strong>Pro rata.</strong> The right to invest more in a later round so that your ownership percentage does not shrink.</p>
             <p style={{ marginBottom: 0 }}><strong>Fully diluted.</strong> Ownership counted as if every option, SAFE and reserved share had already become stock. It is the honest way to read a cap table.</p>
-          </Hint>
-        </details>
-      </div>
+          </div>
+      </details>
     </>
   );
 }

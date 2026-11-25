@@ -10,7 +10,7 @@ export const AUTOMATIONS = [
   { key: "welcome", title: "Welcome new people", help: "Email a short welcome when someone accepts their invitation, and tell you they have joined." },
   { key: "wire_thanks", title: "Thank investors when the wire lands", help: "Send a thank-you when you confirm a wire, and tell them what happens next." },
   { key: "engagement_alerts", title: "Tell me when investors lean in", help: "A note when a firm opens the deck for the first time, keeps returning to the financials, or downloads something." },
-  { key: "onboarding_nudge", title: "Nudge people who have not started", help: "One gentle email to anyone who joined three days ago and has not opened anything." },
+  { key: "onboarding_nudge", title: "Remind supporters who have not looked yet", help: "One email to a supporter who joined three days ago and has not opened anything. Investors are never chased." },
   { key: "financials_reminder", title: "Remind me about the numbers", help: "Early each month, a reminder to add last month's cash and spend, and a warning when runway drops under six months." },
   { key: "weekly_summary", title: "Monday summary", help: "A short email each Monday: what moved last week and what is due this week." },
 ] as const;
@@ -114,9 +114,9 @@ export function afterJoin(userId: number) {
     notify([userId], {
       category: "access",
       title: `Welcome to the ${company()} room`,
-      body: u.role === "supporter" ? "You will get our update once a month. Nothing to review, nothing to sign." : "The first page shows you what to read, in order. It takes about twenty minutes.",
+      body: u.role === "supporter" ? "You will get our update once a month. Nothing to review, nothing to sign." : "Everything is open for you to look at in your own time. If you need something, tell us what and by when.",
       href: "/home",
-      cta: u.role === "supporter" ? "Have a look" : "Start here",
+      cta: "Have a look",
       mail: { replyTo: replyToFounder(), transactional: true },
     }),
   );
@@ -160,7 +160,7 @@ async function onboardingNudges() {
   if (!automationOn("onboarding_nudge")) return;
   const people = q<{ id: number; name: string; role: string }>(
     `SELECT u.id, u.name, u.role FROM users u
-      WHERE u.role IN ('investor','supporter') AND u.disabled = 0
+      WHERE u.role = 'supporter' AND u.disabled = 0
         AND u.created_at < datetime('now', '-3 days') AND u.created_at > datetime('now', '-12 days')
         AND NOT EXISTS (SELECT 1 FROM activity a WHERE a.user_id = u.id AND a.action IN ('doc.view','section.view','update.view'))`,
   );

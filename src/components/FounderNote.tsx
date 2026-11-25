@@ -11,7 +11,7 @@ export function FounderNote({ kind, firstName }: { kind: "investor" | "supporter
   const we = founders.length > 1;
   const fallback =
     kind === "investor"
-      ? `Thank you for taking the time to look at ${company}.\n\n${we ? "We have" : "I have"} laid this room out in the order ${we ? "we" : "I"} would read it ${we ? "ourselves" : "myself"}: the short story first, then the detail. It takes about twenty minutes.\n\nIf anything is unclear or missing, ask. Your question comes straight to ${we ? "us" : "me"}, not to a form.`
+      ? `Thank you for taking the time to look at ${company}.\n\nEverything ${we ? "we" : "I"} would want in your position is here, to read in whatever order suits you.\n\nIf you need something that is not here, or want to talk it through, tell ${we ? "us" : "me"} what and when you need it by. ${we ? "We" : "I"} will work to your timing.`
       : `Thank you for being in ${company}'s corner.\n\nOnce a month ${we ? "we" : "I"} will write to tell you how it is going: what worked, what did not, and where ${we ? "we" : "I"} could use a hand. There is nothing you need to review and nothing to sign.\n\nIf you ever know someone ${we ? "we" : "I"} should meet, that is the most valuable thing you can offer.`;
   const names = founders.map((f) => f.name.split(/\s+/)[0]);
   const signed = names.length <= 1 ? names[0] ?? company : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;

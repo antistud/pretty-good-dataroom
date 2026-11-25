@@ -214,6 +214,7 @@ CREATE TABLE IF NOT EXISTS requests (
   title TEXT NOT NULL,
   body TEXT,
   status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','in_progress','fulfilled','declined')),
+  needed_by TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -324,7 +325,7 @@ CREATE TABLE IF NOT EXISTS checks (
 `;
 
 const DEFAULT_FOLDERS: [string, string, number][] = [
-  ["Pitch", "Deck, one-pager and demo. Start here.", 1],
+  ["Pitch", "Deck, one-pager and demo.", 1],
   ["Company & org docs", "Certificate of incorporation, bylaws, board consents, EIN letter.", 2],
   ["Cap table & SAFEs", "Signed SAFEs, stock purchase agreements, 83(b) elections.", 2],
   ["Financials", "Model, bank statements, budget.", 2],
@@ -347,6 +348,15 @@ function open(): Database.Database {
   d.pragma("journal_mode = WAL");
   d.pragma("foreign_keys = ON");
   d.exec(SCHEMA);
+  // Columns added after the first release. Each is added once, to databases created before it existed.
+  const hasColumn = (table: string, column: string) => (d.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).some((c) => c.name === column);
+  if (!hasColumn("requests", "needed_by")) {
+    try {
+      d.exec("ALTER TABLE requests ADD COLUMN needed_by TEXT");
+    } catch {
+      /* another process added it first */
+    }
+  }
   d.transaction(() => {
     if (d.prepare("SELECT 1 FROM tiers").get()) return;
     const t = d.prepare("INSERT INTO tiers (level, name, can_download) VALUES (?,?,?)");
