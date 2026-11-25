@@ -18,6 +18,7 @@ const BASE = (process.env.SITE_BASE || "/").replace(/\/?$/, "/");
 const DOCS = [
   { group: "Start", slug: "getting-started", file: "docs/getting-started.md" },
   { group: "Start", slug: "digitalocean", file: "docs/digitalocean.md" },
+  { group: "Start", slug: "other-clouds", file: "docs/other-clouds.md" },
   { group: "Start", slug: "email", file: "docs/email.md" },
   { group: "Use", slug: "ai-connector", file: "docs/ai-connector.md" },
   { group: "Use", slug: "using-the-room", file: "docs/using-the-room.md" },
@@ -184,7 +185,7 @@ docs.forEach((d, n) => {
 fs.writeFileSync(path.join(OUT, "docs", "index.html"), `<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=getting-started.html"><link rel="canonical" href="getting-started.html"><title>Documentation</title><a href="getting-started.html">Documentation</a>`);
 
 const home = fs.readFileSync(path.join(HERE, "home.html"), "utf8");
-fs.writeFileSync(path.join(OUT, "index.html"), page({ base: "", title: "Pretty Good Data Room: a self-hosted data room for your first raise", description: "An open-source, self-hosted data room and fundraising workspace for pre-seed startups. One command to install, one file of data, no passwords.", body: home, current: "home" }));
+fs.writeFileSync(path.join(OUT, "index.html"), page({ base: "", title: "Pretty Good Data Room: a free, self-hosted data room for early founders", description: "A free, open-source data room and fundraising workspace for early founders. Runs on your own server: one command to install, one file of data, no passwords.", body: home, current: "home" }));
 fs.writeFileSync(path.join(OUT, "404.html"), page({ base: BASE, title: "Page not found · Pretty Good Data Room", description: "That page does not exist.", body: `<main class="prose" style="margin:80px auto;padding:0 28px"><h1>That page does not exist</h1><p>It may have moved. Try the <a href="${BASE}docs/getting-started.html">documentation</a> or the <a href="${BASE}">home page</a>.</p></main>`, current: "" }));
 
 // Every internal link must lead somewhere.

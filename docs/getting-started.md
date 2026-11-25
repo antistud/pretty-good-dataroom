@@ -1,6 +1,6 @@
 # Getting started
 
-Pretty Good Data Room runs on a server you control. Installing it takes one command and about ten minutes.
+Pretty Good Data Room is free and open source, and runs on a server you control. Installing it takes one command and about ten minutes.
 
 ## What you need
 
@@ -24,7 +24,7 @@ The installer:
 4. schedules a nightly backup,
 5. prints your address and a **setup token**.
 
-Using DigitalOcean? There is a [click-by-click version](digitalocean.md).
+Using DigitalOcean? There is a [click-by-click version](digitalocean.md). For AWS, Google Cloud, Azure, Hetzner and others, see [other clouds](other-clouds.md).
 
 ## Create your account
 

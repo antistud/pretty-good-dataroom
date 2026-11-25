@@ -1,8 +1,8 @@
 # Pretty Good Data Room
 
-A self-hosted data room and fundraising workspace for pre-seed startups. One command to install, one SQLite file, and email as the only outside service.
+A free, self-hosted data room and fundraising workspace for early founders. One command to install, one SQLite file, and email as the only outside service.
 
-**Documentation:** [getting started](docs/getting-started.md) · [email](docs/email.md) · [AI setup](docs/ai-connector.md) · [using the room](docs/using-the-room.md) · [running it](docs/running.md) · [locked out](docs/locked-out.md) · [security](SECURITY.md)
+**Documentation:** [getting started](docs/getting-started.md) · [DigitalOcean](docs/digitalocean.md) · [other clouds](docs/other-clouds.md) · [email](docs/email.md) · [AI setup](docs/ai-connector.md) · [using the room](docs/using-the-room.md) · [running it](docs/running.md) · [locked out](docs/locked-out.md) · [security](SECURITY.md)
 
 It does two jobs:
 
