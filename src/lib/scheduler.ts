@@ -2,6 +2,7 @@ import { q, run, getSetting, isSetUp } from "./db";
 import { appUrl, hashToken, newToken } from "./auth";
 import { escapeHtml, mailEnabled, sendMail } from "./mail";
 import { visibleDocuments } from "./docs";
+import { runAutomations } from "./automations";
 import { monthLabel } from "./format";
 import { externalRecipients, markSent, updateDue, wasSent } from "./updates";
 
@@ -203,6 +204,8 @@ export async function runScheduledJobs(now = new Date()) {
     }
   };
   await guarded("housekeeping", () => housekeeping(now));
+  // In-app notices work without email, so automations run either way.
+  await guarded("automations", () => runAutomations(now));
   // Everything below only sends email. Without SMTP the app shows in-app banners instead.
   if (!mailEnabled()) return;
   await guarded("founder update nags", () => founderUpdateNags(now));

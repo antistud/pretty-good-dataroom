@@ -5,6 +5,7 @@ import { appUrl, requireSection, requireStaff } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { escapeHtml, sendMail } from "@/lib/mail";
 import { flash } from "@/lib/flash";
+import { notify, staffIds } from "@/lib/notify";
 import { formLevel, formStr } from "@/lib/format";
 
 const OFFER_STATUSES = ["offered", "intro_made", "met", "closed"];
@@ -53,15 +54,15 @@ export async function offerIntroAction(form: FormData) {
   const res = run("INSERT INTO intro_offers (ask_id, user_id, contact_name, contact_detail, note) VALUES (?,?,?,?,?)", askId, me.id, contact, detail || null, note || null);
   const id = Number(res.lastInsertRowid);
   logActivity(me, "intro.offer", "intro_offer", id, contact);
-  const staff = q<{ email: string }>("SELECT email FROM users WHERE role IN ('founder','team') AND disabled = 0 AND email_opt_out = 0 AND id != ?", me.id);
-  for (const s of staff) {
-    await sendMail(
-      s.email,
-      `${me.name} can introduce you to ${contact}`,
-      `<p><strong>${escapeHtml(me.name)}</strong>${me.orgName ? ` (${escapeHtml(me.orgName)})` : ""} offered an introduction to <strong>${escapeHtml(contact)}</strong>${askTitle ? ` for your ask “${escapeHtml(askTitle)}”` : ""}.</p>${detail ? `<p>${escapeHtml(detail)}</p>` : ""}${note ? `<p>${escapeHtml(note).replace(/\n/g, "<br>")}</p>` : ""}<p>Reply to them quickly and send the forwardable blurb.</p>`,
-      { label: "Open Set Me Up", url: `${appUrl()}/intros` },
-    );
-  }
+  await notify(staffIds().filter((u) => u !== me.id), {
+    category: "intros",
+    title: `${me.name} can introduce you to ${contact}`,
+    body: askTitle ? `For your ask: ${askTitle}` : undefined,
+    href: "/intros",
+    cta: "Open Set Me Up",
+    emailHtml: `<p><strong>${escapeHtml(me.name)}</strong>${me.orgName ? ` (${escapeHtml(me.orgName)})` : ""} offered an introduction to <strong>${escapeHtml(contact)}</strong>${askTitle ? ` for your ask “${escapeHtml(askTitle)}”` : ""}.</p>${detail ? `<p>${escapeHtml(detail)}</p>` : ""}${note ? `<p>${escapeHtml(note).replace(/\n/g, "<br>")}</p>` : ""}<p>Reply to them while it is fresh, and send the forwardable blurb.</p>`,
+    mail: { replyTo: me.email },
+  });
   flash("/intros", "Thank you. The founders have been told and will follow up with you directly.");
 }
 
@@ -70,19 +71,24 @@ export async function setOfferStatusAction(form: FormData) {
   const id = Number(form.get("offer_id"));
   const status = String(form.get("status") ?? "");
   if (!OFFER_STATUSES.includes(status)) flash("/intros", "Unknown status.", "error");
-  const offer = q1<{ status: string; contact_name: string; email: string | null; name: string | null; email_opt_out: number | null; disabled: number | null }>(
-    `SELECT o.status, o.contact_name, u.email, u.name, u.email_opt_out, u.disabled FROM intro_offers o LEFT JOIN users u ON u.id = o.user_id WHERE o.id = ?`,
+  const offer = q1<{ user_id: number | null; status: string; contact_name: string; email: string | null; name: string | null; email_opt_out: number | null; disabled: number | null }>(
+    `SELECT o.user_id, o.status, o.contact_name, u.email, u.name, u.email_opt_out, u.disabled FROM intro_offers o LEFT JOIN users u ON u.id = o.user_id WHERE o.id = ?`,
     id,
   );
   if (!offer) flash("/intros", "That offer was not found.", "error");
   run("UPDATE intro_offers SET status = ? WHERE id = ?", status, id);
   logActivity(me, "intro.offer_status", "intro_offer", id, status);
-  if (status === "intro_made" && offer!.status !== "intro_made" && offer!.email && !offer!.email_opt_out && !offer!.disabled) {
-    await sendMail(
-      offer!.email,
-      `Thank you for the introduction to ${offer!.contact_name}`,
-      `<p>Hi ${escapeHtml(offer!.name ?? "")},</p><p>Thank you for introducing us to <strong>${escapeHtml(offer!.contact_name)}</strong>. Introductions like this are the single most useful thing anyone does for ${escapeHtml(getSetting("company_name"))}, and we will let you know how it goes.</p><p>${escapeHtml(me.name)}</p>`,
-    );
+  if (status === "intro_made" && offer!.status !== "intro_made" && offer!.user_id) {
+    await notify([offer!.user_id], {
+      category: "intros",
+      title: `Thank you for the introduction to ${offer!.contact_name}`,
+      href: "/intros",
+      cta: "See your introductions",
+      emailHtml: `<p>Hi ${escapeHtml((offer!.name ?? "").split(/\s+/)[0])},</p><p>Thank you for introducing us to <strong>${escapeHtml(offer!.contact_name)}</strong>. Introductions like this are the most useful thing anyone does for ${escapeHtml(getSetting("company_name"))}, and we will let you know how it goes.</p><p>${escapeHtml(me.name)}</p>`,
+      mail: { replyTo: me.email },
+    });
+  } else if (status === "met" && offer!.status !== "met" && offer!.user_id) {
+    await notify([offer!.user_id], { category: "intros", title: `We met ${offer!.contact_name}. Thank you again.`, href: "/intros", email: false });
   }
   flash("/intros", "Updated.");
 }

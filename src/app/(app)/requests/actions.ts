@@ -6,6 +6,7 @@ import { getDocument } from "@/lib/docs";
 import { logActivity } from "@/lib/activity";
 import { escapeHtml, sendMail } from "@/lib/mail";
 import { flash } from "@/lib/flash";
+import { notify, orgMemberIds, replyToFounder, staffIds } from "@/lib/notify";
 import { formStr } from "@/lib/format";
 
 const KINDS = ["question", "document", "data", "call"];
@@ -15,13 +16,13 @@ const STATUS_LABEL: Record<string, string> = { open: "open", in_progress: "in pr
 type Req = { id: number; org_id: number | null; title: string; status: string };
 
 async function mailStaff(subject: string, html: string, url: string) {
-  const staff = q<{ email: string }>("SELECT email FROM users WHERE role IN ('founder','team') AND disabled = 0 AND email_opt_out = 0");
-  for (const s of staff) await sendMail(s.email, subject, html, { label: "Open the request", url });
+  await notify(staffIds(), { category: "requests", title: subject, href: url.replace(appUrl(), ""), emailHtml: html, cta: "Open the request" });
 }
 async function mailOrg(orgId: number | null, exceptUserId: number, subject: string, html: string, url: string) {
-  if (!orgId) return;
-  const members = q<{ email: string }>("SELECT email FROM users WHERE org_id = ? AND disabled = 0 AND email_opt_out = 0 AND id != ?", orgId, exceptUserId);
-  for (const m of members) await sendMail(m.email, subject, html, { label: "See the reply", url });
+  await notify(orgMemberIds(orgId, exceptUserId), {
+    category: "requests", title: subject, href: url.replace(appUrl(), ""), emailHtml: html, cta: "See the reply",
+    mail: { replyTo: replyToFounder(exceptUserId) },
+  });
 }
 
 /** Loads a request only if this viewer is allowed to touch it. */
@@ -29,7 +30,7 @@ function loadFor(me: Viewer, id: number): Req | undefined {
   const r = q1<Req>("SELECT id, org_id, title, status FROM requests WHERE id = ?", id);
   if (!r) return undefined;
   if (me.isStaff) return r;
-  if (!me.orgId || r.org_id !== me.orgId || !canSeeSection(me, "requests")) return undefined;
+  if (!me.orgId || r.org_id !== me.orgId) return undefined;
   return r;
 }
 

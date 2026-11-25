@@ -4,6 +4,8 @@ import { NavLink } from "@/components/NavLink";
 import { Palette, type PaletteItem } from "@/components/Palette";
 import { Cheer } from "@/components/Cheer";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
+import { Chrome, type Tab } from "@/components/Chrome";
+import { unreadCount } from "@/lib/notify";
 import { canSee, canSeeSection, requireUser } from "@/lib/auth";
 import { getSetting, q } from "@/lib/db";
 import { monthLabel, tierName } from "@/lib/format";
@@ -40,18 +42,42 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ...(show("requests") ? [{ label: me.isStaff ? "Requests" : "Ask or request", href: "/requests", kind: "Go to" }] : []),
     ...(show("intros") ? [{ label: "Set Me Up", href: "/intros", kind: "Go to" }] : []),
     ...(me.role === "founder" ? [{ label: "Settings", href: "/settings", kind: "Go to" }] : []),
+    { label: "What's new", href: "/notifications", kind: "Go to" },
     { label: "Account", href: "/account", kind: "Go to" },
   ];
+
+  const unread = unreadCount(me.id);
+  const tabs: Tab[] = me.isStaff
+    ? [
+        { label: "Today", href: "/home", icon: "home" },
+        { label: "Pipeline", href: "/pipeline", icon: "people" },
+        { label: "Requests", href: "/requests", icon: "chat" },
+        { label: "Updates", href: "/updates", icon: "mail" },
+      ]
+    : [
+        { label: "Start", href: "/home", icon: "home" },
+        ...(show("documents") ? [{ label: "Documents", href: "/documents", icon: "doc" } as Tab] : []),
+        ...(show("updates") ? [{ label: "Updates", href: "/updates", icon: "mail" } as Tab] : []),
+        ...(show("requests") ? [{ label: "Ask", href: "/requests", icon: "chat" } as Tab] : show("intros") ? [{ label: "Help", href: "/intros", icon: "people" } as Tab] : []),
+      ];
 
   return (
     <div className="shell">
       <Suspense fallback={null}><Cheer /></Suspense>
+      <Suspense fallback={null}><Chrome tabs={tabs} unread={unread} /></Suspense>
+      <header className="topbar">
+        <Link href="/home">{company}</Link>
+        <Link href="/notifications" aria-label={`What's new${unread ? `, ${unread} unread` : ""}`} style={{ fontFamily: "var(--sans)", fontSize: 14 }}>
+          {unread > 0 ? <span className="count">{unread}</span> : <span className="muted">What&apos;s new</span>}
+        </Link>
+      </header>
       <aside className="side">
         <div className="brand">{company}</div>
         <div className="brand-sub">{me.isStaff ? "Founder workspace" : me.role === "supporter" ? "Supporter updates" : "Investor data room"}</div>
         <Palette nav={jump} />
         <nav>
           <NavLink href="/home">{me.isStaff ? "Today" : "Start here"}</NavLink>
+          <NavLink href="/notifications"><span className="bell" style={{ flex: 1 }}>What&apos;s new {unread > 0 && <span className="count">{unread}</span>}</span></NavLink>
           {me.isStaff && (
             <>
               <NavLink href="/guide">Founder guide</NavLink>

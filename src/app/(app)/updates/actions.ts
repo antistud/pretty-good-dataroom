@@ -6,7 +6,8 @@ import { requireStaff } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { flash } from "@/lib/flash";
 import { formLevel, formStr, monthLabel } from "@/lib/format";
-import { allSections, createDraft, getUpdate, sendUpdateEmails, tierLevels } from "@/lib/updates";
+import { allSections, createDraft, externalRecipients, getUpdate, sendUpdateEmails, tierLevels } from "@/lib/updates";
+import { notify } from "@/lib/notify";
 
 export async function createUpdateAction(form: FormData) {
   const me = await requireStaff();
@@ -120,6 +121,13 @@ export async function publishUpdateAction(form: FormData) {
   run("UPDATE updates SET status = 'published', published_at = datetime('now') WHERE id = ?", id);
   logActivity(me, "update.publish", "update", id, update.period);
   const res = await sendUpdateEmails(id);
+  // The email carries the content; this adds the matching in-app notice for everyone who can read it.
+  const sections = allSections(id);
+  for (const p of externalRecipients()) {
+    if (sections.some((sec) => sec.min_level <= p.level) && !q1("SELECT 1 FROM notifications WHERE user_id = ? AND href = ?", p.id, `/updates/${id}`)) {
+      await notify([p.id], { category: "updates", title: `New from the founders: ${update.title}`, href: `/updates/${id}`, email: false });
+    }
+  }
   flash(`/updates/${id}`, `Published. ${sendMessage(res)}`, "ok", "published");
 }
 

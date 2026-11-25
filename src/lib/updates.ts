@@ -202,6 +202,7 @@ export async function sendUpdateEmails(updateId: number): Promise<{ sent: number
   const all = allSections(updateId);
   const company = getSetting("company_name");
   const url = `${appUrl()}/updates/${updateId}`;
+  const replyTo = q1<{ email: string }>("SELECT email FROM users WHERE role = 'founder' AND disabled = 0 ORDER BY id LIMIT 1");
   let sent = 0;
   let failed = 0;
   for (const p of [...externalRecipients(), ...staffRecipients()]) {
@@ -217,7 +218,7 @@ export async function sendUpdateEmails(updateId: number): Promise<{ sent: number
       isStaff ? [] : visibleAsks(p.level),
       isStaff ? `Hi ${p.name}, this is your copy of the full update that just went out. Each reader got only the sections their access allows.` : `Hi ${p.name},`,
     );
-    const ok = await sendMail(p.email, `${company}: ${update.title}`, html, { label: "Read it in the data room", url });
+    const ok = await sendMail(p.email, `${company}: ${update.title}`, html, { label: "Read it and reply", url }, { replyTo: replyTo?.email, preview: sections[0]?.body_md.replace(/[#*_`>\[\]]/g, "").slice(0, 140) });
     if (ok) {
       markSent(key);
       sent++;

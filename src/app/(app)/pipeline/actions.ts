@@ -5,6 +5,7 @@ import { requireStaff, type Viewer } from "@/lib/auth";
 import { createInvite } from "@/lib/invites";
 import { logActivity } from "@/lib/activity";
 import { flash } from "@/lib/flash";
+import { afterStageChange } from "@/lib/automations";
 import { formNum, formStr, money } from "@/lib/format";
 import { STAGES, isStage, stageOf, tierLevelForRank, type Lead, type StageKey } from "@/lib/pipeline";
 
@@ -26,6 +27,8 @@ function formRound(v: FormDataEntryValue | null): number | null {
 
 /** Moves a lead and keeps data room access and SAFE status in step with the stage. */
 function setStage(me: Viewer, lead: Lead, stage: StageKey) {
+  const levelOf = () => (lead.org_id ? q1<{ tier: number; kind: string }>("SELECT tier, kind FROM orgs WHERE id = ?", lead.org_id) : undefined);
+  const before = levelOf();
   run("UPDATE leads SET stage = ?, updated_at = datetime('now') WHERE id = ?", stage, lead.id);
   const rank = stageOf(stage).tierRank;
   if (lead.org_id && rank > 0) {
@@ -48,6 +51,8 @@ function setStage(me: Viewer, lead: Lead, stage: StageKey) {
     );
   }
   logActivity(me, "lead.stage", "lead", lead.id, `${lead.org_name}: ${lead.stage} -> ${stage}`);
+  const after = levelOf();
+  afterStageChange(me.id, lead, stage, before ? (before.kind === "investor" ? before.tier : 0) : null, after ? (after.kind === "investor" ? after.tier : 0) : null);
 }
 
 export async function addLeadAction(form: FormData) {

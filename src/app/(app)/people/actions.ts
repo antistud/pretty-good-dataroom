@@ -5,6 +5,7 @@ import { appUrl, hashToken, newToken, requireFounder, requireStaff } from "@/lib
 import { createInvite } from "@/lib/invites";
 import { logActivity } from "@/lib/activity";
 import { flash } from "@/lib/flash";
+import { announceAccess } from "@/lib/automations";
 import { formStr } from "@/lib/format";
 
 function inviteMessage(res: { url: string; emailed: boolean }) {
@@ -52,10 +53,12 @@ export async function inviteAction(form: FormData) {
 
 export async function setOrgTierAction(form: FormData) {
   const me = await requireStaff();
+  let announceAccessLater: { orgId: number; old: number; next: number; by: number } | null = null;
   const orgId = Number(form.get("org_id"));
   const raw = String(form.get("tier"));
-  const org = q1<{ name: string }>("SELECT name FROM orgs WHERE id = ?", orgId);
+  const org = q1<{ name: string; tier: number; kind: string }>("SELECT name, tier, kind FROM orgs WHERE id = ?", orgId);
   if (!org) flash("/people", "Organisation not found.", "error");
+  if (raw !== "0") announceAccessLater = { orgId, old: org!.kind === "investor" ? org!.tier : 0, next: Number(raw), by: me.id };
   if (raw === "0") {
     run("UPDATE orgs SET kind = 'supporter', tier = 0 WHERE id = ?", orgId);
     run("UPDATE users SET role = 'supporter' WHERE org_id = ?", orgId);
@@ -68,6 +71,7 @@ export async function setOrgTierAction(form: FormData) {
     run("UPDATE invites SET role = 'investor' WHERE org_id = ? AND accepted_at IS NULL", orgId);
   }
   logActivity(me, "org.tier", "org", orgId, `${org!.name} -> ${raw}`);
+  if (announceAccessLater) announceAccess(announceAccessLater.orgId, announceAccessLater.old, announceAccessLater.next, announceAccessLater.by);
   flash("/people", `Access for ${org!.name} updated.`);
 }
 

@@ -4,6 +4,7 @@ import { q, q1, run, setSetting, getSetting } from "@/lib/db";
 import { requireFounder } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { flash } from "@/lib/flash";
+import { AUTOMATIONS } from "@/lib/automations";
 import { formLevel, formStr } from "@/lib/format";
 import { mailEnabled, sendMail } from "@/lib/mail";
 
@@ -128,4 +129,11 @@ export async function saveWelcomeAction(form: FormData) {
   setSetting("welcome_supporter", formStr(form.get("welcome_supporter"), 3000));
   logActivity(me, "settings.welcome");
   flash("/settings", "Welcome notes saved. New visitors will see your words.");
+}
+
+export async function saveAutomationsAction(form: FormData) {
+  const me = await requireFounder();
+  for (const a of AUTOMATIONS) setSetting(`auto_${a.key}`, form.get(a.key) === "on" ? "1" : "0");
+  logActivity(me, "settings.automations");
+  flash("/settings#automations", "Saved.");
 }

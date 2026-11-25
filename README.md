@@ -24,6 +24,10 @@ It does two jobs:
 | Guided onboarding | A "Start here" checklist for investors and a lighter welcome for supporters |
 | Founder guide | A six-stage path through the raise, a daily note, a room health score and ready-to-edit wording for each message you need to send |
 | Delight | A garden where each investor grows with the conversation, drag-and-drop pipeline, search and jump (Ctrl/Cmd+K), light and dark themes, a quiet celebration when money lands |
+| Notifications | A "What's new" inbox for everyone, with matching emails each person can switch on or off by topic |
+| Replies | Readers can answer an update with one tap or a written reply; founders see who read it. Emails set Reply-To to a founder so replies reach a person |
+| Automations | Automatic next steps, welcomes, wire thank-yous, alerts when investors lean in, nudges, runway warnings and a Monday summary. Each can be switched off |
+| Phone | A bottom tab bar, stacked tables, large touch targets, and it can be added to the home screen |
 | Sample company | One click loads a fictional raise into an empty room so you can look around; one click removes exactly what it added |
 | Security | Invite-only, scrypt password hashes, optional two-step sign-in, optional NDA gate, activity and audit log |
 
@@ -67,6 +71,7 @@ Stack: Next.js (App Router, server actions), TypeScript, better-sqlite3, pdf-lib
 ## Limits to know about
 
 - This tool tracks and guides. It is not legal, tax or securities advice, and its SAFE maths is a planning aid, not a closing calculation. Have a lawyer confirm conversions and filings.
+- It does not read incoming email. Replies to its emails go to a founder's own inbox; replies inside the room are threaded.
 - It does not do e-signatures. Sign elsewhere and upload the signed copy.
 - Watermarks and view-only mode deter casual sharing; they cannot stop someone photographing a screen.
 - It is built for one company per install.

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { q, q1 } from "@/lib/db";
+import { reactUpdateAction, replyUpdateAction } from "../respond-actions";
 import { redirect } from "next/navigation";
 import { requireSection } from "@/lib/auth";
 import { logView } from "@/lib/activity";
@@ -47,6 +49,34 @@ function Reading({ sections }: { sections: SectionRow[] }) {
   );
 }
 
+const REACTION: Record<string, string> = { thanks: "said thanks", help: "can help with an ask", talk: "wants to talk" };
+
+/** For founders: who has read this update and how they responded. */
+function Readers({ updateId }: { updateId: number }) {
+  const readers = q<{ name: string; org: string | null; at: string; kind: string | null }>(
+    `SELECT u.name, o.name AS org, MIN(a.created_at) AS at, r.kind
+       FROM activity a JOIN users u ON u.id = a.user_id LEFT JOIN orgs o ON o.id = u.org_id
+       LEFT JOIN update_reactions r ON r.update_id = a.target_id AND r.user_id = u.id
+      WHERE a.action = 'update.view' AND a.target_id = ? GROUP BY u.id ORDER BY at`,
+    updateId,
+  );
+  return (
+    <div className="card">
+      <h2>Who has read it</h2>
+      {readers.length === 0 ? <p className="muted">Nobody yet. Most people open an update within a day or two.</p> : (
+        <ul className="quiet-list">
+          {readers.map((r) => (
+            <li key={r.name + r.at}>
+              {r.name}{r.org ? <span className="muted"> · {r.org}</span> : null}
+              {r.kind ? <strong> {REACTION[r.kind]}</strong> : null} <span className="muted small">· {fmtDate(r.at)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export default async function UpdatePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string>> }) {
   const me = await requireSection("updates");
   const id = Number((await params).id);
@@ -59,13 +89,33 @@ export default async function UpdatePage({ params, searchParams }: { params: Pro
     const mine = all.filter((s) => s.min_level <= me.level && s.body_md.trim());
     if (update.status !== "published" || mine.length === 0) redirect("/updates");
     logView(me, "update.view", "update", id);
+    const myReaction = q1<{ kind: string }>("SELECT kind FROM update_reactions WHERE update_id = ? AND user_id = ?", id, me.id)?.kind;
     return (
       <>
         <PageHead title={update.title} sub={`Covers ${monthLabel(update.period)} · published ${fmtDate(update.published_at)}`}>
           <Link className="btn" href="/updates">All updates</Link>
         </PageHead>
+        <Flash sp={sp} />
         <div className="card"><Reading sections={mine} /></div>
         <AsksBlock asks={visibleAsks(me.level)} />
+        <div className="card">
+          <h2>Say something back</h2>
+          <p className="muted" style={{ marginTop: -6 }}>One tap tells the founders you read it. A few words mean more.</p>
+          <div className="row" style={{ marginBottom: 14 }}>
+            {([["thanks", "Thanks for the update"], ["help", "I can help with an ask"], ["talk", "Let's talk"]] as const).map(([kind, label]) => (
+              <form action={reactUpdateAction} key={kind}>
+                <input type="hidden" name="update_id" value={id} />
+                <input type="hidden" name="kind" value={kind} />
+                <button className={`btn ${myReaction === kind ? "primary" : ""}`}>{myReaction === kind ? "✓ " : ""}{label}</button>
+              </form>
+            ))}
+          </div>
+          <form action={replyUpdateAction}>
+            <input type="hidden" name="update_id" value={id} />
+            <Field label="Reply to the founders"><textarea name="body" rows={3} placeholder="A thought, a question, an offer…" required /></Field>
+            <button className="btn">Send reply</button>
+          </form>
+        </div>
       </>
     );
   }
@@ -101,6 +151,7 @@ export default async function UpdatePage({ params, searchParams }: { params: Pro
         {!published && !confirm && <Link className="btn primary" href={`/updates/${id}?confirm=1`}>Publish and send…</Link>}
       </PageHead>
       <Flash sp={sp} />
+      {update.status === "published" && <Readers updateId={id} />}
 
       {confirm && (
         <div className="card">

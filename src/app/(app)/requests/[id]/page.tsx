@@ -27,7 +27,7 @@ export default async function RequestThread({ params, searchParams }: { params: 
     id,
   );
   // Investors can only open their own organisation's requests.
-  if (!req || (!me.isStaff && (!me.orgId || req.org_id !== me.orgId || !canSeeSection(me, "requests")))) redirect("/requests");
+  if (!req || (!me.isStaff && (!me.orgId || req.org_id !== me.orgId))) redirect(canSeeSection(me, "requests") ? "/requests" : "/home");
 
   const messages = q<Msg>(
     `SELECT m.id, m.body, m.document_id, m.created_at, u.name AS author, u.role AS author_role

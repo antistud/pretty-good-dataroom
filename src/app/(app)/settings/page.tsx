@@ -1,11 +1,12 @@
 import { appUrl, requireFounder } from "@/lib/auth";
 import { getSetting, q } from "@/lib/db";
-import { levelName, levelOptions } from "@/lib/format";
+import { ago, levelName, levelOptions } from "@/lib/format";
 import { mailEnabled } from "@/lib/mail";
 import { Field, Flash, Hint, LevelSelect, PageHead } from "@/components/ui";
 import {
   createPageAction, deletePageAction, saveCompanyAction, saveNdaAction, saveSectionsAction, saveTiersAction,
-  saveUpdateDayAction, testEmailAction, updatePageAction, saveWelcomeAction } from "./actions";
+  saveUpdateDayAction, testEmailAction, updatePageAction, saveWelcomeAction, saveAutomationsAction } from "./actions";
+import { AUTOMATIONS, automationOn } from "@/lib/automations";
 
 const SECTIONS: [string, string, string][] = [
   ["overview", "Overview", "The company summary."],
@@ -39,6 +40,7 @@ function PageFields({ p }: { p?: Page }) {
 
 export default async function Settings({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   await requireFounder();
+  const emailLog = q<{ id: number; to_email: string; subject: string; status: string; error: string | null; created_at: string }>("SELECT * FROM email_log ORDER BY id DESC LIMIT 40");
   const tiers = q<{ level: number; name: string; can_download: number }>("SELECT level, name, can_download FROM tiers ORDER BY level");
   const pages = q<Page>("SELECT * FROM pages ORDER BY position, id");
   const options = [...levelOptions(), { level: 999, label: "Off (hidden from everyone, including you)" }];
@@ -81,6 +83,41 @@ export default async function Settings({ searchParams }: { searchParams: Promise
           <button className="btn">Save welcome notes</button>
         </form>
       </div>
+
+      <div className="card" id="automations">
+        <h2>Things the room does for you</h2>
+        <p className="muted" style={{ marginTop: -6, maxWidth: "66ch" }}>Each of these runs on its own. Switch off any you would rather do by hand. Monthly update reminders are set separately above.</p>
+        <form action={saveAutomationsAction}>
+          {AUTOMATIONS.map((a) => (
+            <p key={a.key} style={{ marginBottom: 10 }}>
+              <label className="row" style={{ alignItems: "flex-start", flexWrap: "nowrap" }}>
+                <input type="checkbox" name={a.key} defaultChecked={automationOn(a.key)} style={{ marginTop: 5, flex: "none" }} />
+                <span><strong>{a.title}</strong><br /><span className="muted">{a.help}</span></span>
+              </label>
+            </p>
+          ))}
+          <button className="btn">Save</button>
+        </form>
+      </div>
+
+      <details className="card" id="emails">
+        <summary>Emails sent recently ({emailLog.length})</summary>
+        {emailLog.length === 0 ? <p className="muted">Nothing has been sent yet.</p> : (
+          <div className="table-wrap"><table className="table">
+            <thead><tr><th>When</th><th>To</th><th>Subject</th><th>Result</th></tr></thead>
+            <tbody>
+              {emailLog.map((e) => (
+                <tr key={e.id}>
+                  <td className="small muted nowrap">{ago(e.created_at)}</td>
+                  <td className="small">{e.to_email}</td>
+                  <td>{e.subject}</td>
+                  <td><span className={`badge ${e.status === "sent" ? "ok" : e.status === "failed" ? "bad" : "grey"}`}>{e.status}</span>{e.error ? <div className="small muted">{e.error}</div> : null}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table></div>
+        )}
+      </details>
 
       <div className="card">
         <h2>Investor access tiers</h2>

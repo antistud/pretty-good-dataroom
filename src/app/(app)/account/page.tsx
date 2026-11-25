@@ -2,6 +2,7 @@ import QRCode from "qrcode";
 import { requireUser } from "@/lib/auth";
 import { getSetting, q, q1 } from "@/lib/db";
 import { totpUri } from "@/lib/totp";
+import { CATEGORIES } from "@/lib/notify";
 import { Field, Flash, Hint, PageHead } from "@/components/ui";
 import { changePasswordAction, confirmTotpAction, disableTotpAction, emailPrefAction, inviteColleagueAction, startTotpAction } from "./actions";
 
@@ -10,6 +11,8 @@ export default async function Account({ searchParams }: { searchParams: Promise<
   const row = q1<{ totp_secret: string | null; email_opt_out: number }>("SELECT totp_secret, email_opt_out FROM users WHERE id = ?", me.id)!;
   const pendingSecret = !me.totpEnabled ? row.totp_secret : null;
   const qr = pendingSecret ? await QRCode.toString(totpUri(pendingSecret, me.email, getSetting("company_name")), { type: "svg", margin: 1, width: 180 }) : null;
+  const prefs = Object.fromEntries(q<{ category: string; email: number }>("SELECT category, email FROM notification_prefs WHERE user_id = ?", me.id).map((p) => [p.category, p.email]));
+  const cats = Object.entries(CATEGORIES).filter(([, c]) => c.who === "all" || (c.who === "staff") === me.isStaff);
   const colleagues = me.orgId ? q<{ name: string; email: string }>("SELECT name, email FROM users WHERE org_id = ? AND disabled = 0 ORDER BY name", me.orgId) : [];
 
   return (
@@ -68,11 +71,18 @@ export default async function Account({ searchParams }: { searchParams: Promise<
         </div>
       </div>
 
-      <div className="card">
-        <h2>Email</h2>
-        <form action={emailPrefAction} className="row">
-          <label className="row"><input type="checkbox" name="emails" defaultChecked={!row.email_opt_out} /> Email me monthly updates and reminders</label>
-          <button className="btn small">Save</button>
+      <div className="card" id="email">
+        <h2>What reaches your inbox</h2>
+        <p className="muted" style={{ marginTop: -6, maxWidth: "62ch" }}>Everything always appears under <a href="/notifications">What&apos;s new</a>. Choose which of it should also be emailed to {me.email}.</p>
+        <form action={emailPrefAction}>
+          <p><label className="row"><input type="checkbox" name="emails" defaultChecked={!row.email_opt_out} /> <strong>Send me emails</strong></label></p>
+          <div style={{ paddingLeft: 26 }}>
+            {cats.map(([key, c]) => (
+              <p key={key} style={{ marginBottom: 6 }}><label className="row"><input type="checkbox" name={`cat_${key}`} defaultChecked={prefs[key] !== 0} /> {c.label}</label></p>
+            ))}
+          </div>
+          <p className="muted small">Sign-in and password emails are always sent.</p>
+          <button className="btn">Save</button>
         </form>
       </div>
     </>

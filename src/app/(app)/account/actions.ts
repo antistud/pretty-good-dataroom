@@ -6,6 +6,7 @@ import { newTotpSecret, verifyTotp } from "@/lib/totp";
 import { createInvite } from "@/lib/invites";
 import { logActivity } from "@/lib/activity";
 import { flash } from "@/lib/flash";
+import { CATEGORIES } from "@/lib/notify";
 import { formStr } from "@/lib/format";
 
 export async function changePasswordAction(form: FormData) {
@@ -47,8 +48,17 @@ export async function disableTotpAction(form: FormData) {
 
 export async function emailPrefAction(form: FormData) {
   const me = await requireUser();
-  run("UPDATE users SET email_opt_out = ? WHERE id = ?", form.get("emails") === "on" ? 0 : 1, me.id);
-  flash("/account", "Email preference saved.");
+  const all = form.get("emails") === "on";
+  run("UPDATE users SET email_opt_out = ? WHERE id = ?", all ? 0 : 1, me.id);
+  for (const category of Object.keys(CATEGORIES)) {
+    run(
+      "INSERT INTO notification_prefs (user_id, category, email) VALUES (?,?,?) ON CONFLICT(user_id, category) DO UPDATE SET email = excluded.email",
+      me.id,
+      category,
+      form.get(`cat_${category}`) === "on" ? 1 : 0,
+    );
+  }
+  flash("/account#email", all ? "Saved. You will get the emails you ticked." : "Saved. You will not get any emails; everything still appears under What's new.");
 }
 
 /** Investors and supporters can bring colleagues into their own organisation, at the same access. */

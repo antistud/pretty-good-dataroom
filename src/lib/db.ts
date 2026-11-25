@@ -274,6 +274,46 @@ CREATE TABLE IF NOT EXISTS lead_notes (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- In-app notifications: one row per person per event.
+CREATE TABLE IF NOT EXISTS notifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  category TEXT NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT,
+  href TEXT NOT NULL,
+  read_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS notifications_user ON notifications(user_id, read_at, created_at);
+
+-- Per-person email choices by category. No row means "on".
+CREATE TABLE IF NOT EXISTS notification_prefs (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  category TEXT NOT NULL,
+  email INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (user_id, category)
+);
+
+-- Every email the app tried to send, so founders can see what went out and what failed.
+CREATE TABLE IF NOT EXISTS email_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  to_email TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  status TEXT NOT NULL,
+  error TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- A reader's one-tap response to an update.
+CREATE TABLE IF NOT EXISTS update_reactions (
+  update_id INTEGER NOT NULL REFERENCES updates(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL CHECK (kind IN ('thanks','help','talk')),
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (update_id, user_id)
+);
+
 -- Manually ticked checklist items (onboarding steps, founder checklists).
 CREATE TABLE IF NOT EXISTS checks (
   scope TEXT NOT NULL,
@@ -349,6 +389,14 @@ const SETTING_DEFAULTS: Record<string, string> = {
   level_requests: "1",
   level_captable: "2",
   level_financials: "2",
+  // Automations. "1" is on.
+  auto_next_action: "1",
+  auto_welcome: "1",
+  auto_engagement_alerts: "1",
+  auto_onboarding_nudge: "1",
+  auto_financials_reminder: "1",
+  auto_weekly_summary: "1",
+  auto_wire_thanks: "1",
 };
 
 export function getSetting(key: string): string {

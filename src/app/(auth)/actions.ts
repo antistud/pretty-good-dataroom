@@ -10,6 +10,7 @@ import { verifyTotp } from "@/lib/totp";
 import { findInvite } from "@/lib/invites";
 import { logActivity } from "@/lib/activity";
 import { flash } from "@/lib/flash";
+import { afterJoin } from "@/lib/automations";
 import { formStr } from "@/lib/format";
 import { mailEnabled, sendMail } from "@/lib/mail";
 
@@ -95,6 +96,7 @@ export async function acceptInviteAction(form: FormData) {
   run("UPDATE invites SET accepted_at = datetime('now') WHERE id = ?", invite!.id);
   const id = Number(res.lastInsertRowid);
   logActivity({ id, orgId: invite!.org_id }, "invite.accept");
+  afterJoin(id);
   await createSession(id, false);
   redirect("/home");
 }
@@ -116,7 +118,7 @@ export async function forgotAction(form: FormData) {
     await sendMail(email, "Reset your data room password", "<p>Someone asked to reset the password for this account. If that was you, use the button below within one hour. If not, ignore this email.</p>", {
       label: "Choose a new password",
       url: `${appUrl()}/reset/${token}`,
-    });
+    }, { transactional: true });
   }
   // Same message either way, so this page cannot be used to test which emails have accounts.
   flash("/forgot", mailEnabled() ? "If that email has an account, a reset link is on its way." : "Email is not set up on this data room. Ask the founder who invited you for a reset link.");

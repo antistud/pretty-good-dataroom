@@ -1,10 +1,20 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Data room",
   robots: { index: false, follow: false },
+  appleWebApp: { capable: true, title: "Data room", statusBarStyle: "default" },
+};
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#faf6ef" },
+    { media: "(prefers-color-scheme: dark)", color: "#171512" },
+  ],
 };
 export const dynamic = "force-dynamic";
 
