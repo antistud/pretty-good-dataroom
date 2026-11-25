@@ -58,10 +58,10 @@ export function LevelSelect({ name = "min_level", value, label = "Who can see th
   );
 }
 
-export function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+export function Field({ label, hint, aside, children }: { label: string; hint?: string; aside?: React.ReactNode; children: React.ReactNode }) {
   return (
     <label className="field">
-      <span>{label}</span>
+      <span className={aside ? "field-label" : undefined}>{label}{aside}</span>
       {children}
       {hint && <small>{hint}</small>}
     </label>

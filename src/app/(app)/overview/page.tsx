@@ -1,3 +1,5 @@
+import { PromptButton } from "@/components/PromptButton";
+import { oneLinerPrompt, overviewPrompt } from "@/lib/prompts";
 import { ExportBar } from "@/components/Export";
 import Link from "next/link";
 import { canSeeSection, requireSection, type Section } from "@/lib/auth";
@@ -89,8 +91,8 @@ export default async function Overview({ searchParams }: { searchParams: Promise
           <h2>Edit the overview</h2>
           <Hint title="How to write this">Keep it to one screen. An investor should be able to read it in two minutes and know what you do, why it matters and what you are asking for. The box below starts with a suggested outline; replace each line with your own words.</Hint>
           <form action={saveOverviewAction}>
-            <Field label="One-line description" hint="Shown under the company name."><input name="tagline" defaultValue={tagline} maxLength={200} /></Field>
-            <Field label="Overview" hint="Formatting: ## heading, **bold**, - list item, [link text](https://…).">
+            <Field label="One-line description" hint="Shown under the company name." aside={<PromptButton about="the one-line description" prompt={oneLinerPrompt(company, tagline)} />}><input name="tagline" defaultValue={tagline} maxLength={200} /></Field>
+            <Field label="Overview" hint="Formatting: ## heading, **bold**, - list item, [link text](https://…)." aside={<PromptButton about="the overview" prompt={overviewPrompt(company, tagline, body)} />}>
               <textarea name="overview_md" defaultValue={body} placeholder={OUTLINE} style={{ minHeight: 320 }} />
             </Field>
             <div className="grid3">
