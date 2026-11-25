@@ -121,3 +121,11 @@ export async function testEmailAction() {
   if (!ok) flash("/settings", "The email could not be sent. Check the SMTP values and the server log for the reason.", "error");
   flash("/settings", `Test email sent to ${me.email}. Check your inbox and spam folder.`);
 }
+
+export async function saveWelcomeAction(form: FormData) {
+  const me = await requireFounder();
+  setSetting("welcome_investor", formStr(form.get("welcome_investor"), 3000));
+  setSetting("welcome_supporter", formStr(form.get("welcome_supporter"), 3000));
+  logActivity(me, "settings.welcome");
+  flash("/settings", "Welcome notes saved. New visitors will see your words.");
+}

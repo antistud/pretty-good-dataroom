@@ -27,7 +27,7 @@ export function loadSample(now = new Date()) {
     }
     const round = ins(
       "rounds",
-      "INSERT INTO rounds (name, instrument, status, target_amount, valuation_cap, min_check, terms_md, opened_at) VALUES ('Pre-seed (sample)', 'safe', 'open', 750000, 6000000, 10000, ?, datetime('now', '-21 days'))",
+      "INSERT INTO rounds (name, instrument, status, target_amount, valuation_cap, min_check, terms_md, min_level, opened_at) VALUES ('Pre-seed (sample)', 'safe', 'open', 750000, 6000000, 10000, ?, 100, datetime('now', '-21 days'))",
       "Raising $750K on post-money SAFEs to reach 20 paying customers and a repeatable sales motion.",
     );
     const day = (offset: number) => new Date(now.getTime() + offset * 86400_000).toISOString().slice(0, 10);
@@ -64,8 +64,8 @@ export function loadSample(now = new Date()) {
     }
     ins("team_members", "INSERT INTO team_members (name, title, bio, position) VALUES ('Sample Founder A', 'CEO', 'Ten years building products in this market. Previously led product at a company you have heard of.', 0)");
     ins("team_members", "INSERT INTO team_members (name, title, bio, position) VALUES ('Sample Founder B', 'CTO', 'Built and ran the platform team at a fast-growing startup.', 1)");
-    ins("intro_asks", "INSERT INTO intro_asks (title, detail, blurb, min_level) VALUES (?,?,?,0)", "Heads of operations at mid-size clinics", "We are looking for three more design partners.", "Meet the founders of a company helping clinics cut admin time. They are looking for design partners and would value 20 minutes.");
-    ins("intro_asks", "INSERT INTO intro_asks (title, detail, blurb, min_level) VALUES (?,?,?,0)", "A fractional CFO who knows early-stage SaaS", "A few hours a month.", "An early-stage founder is looking for a fractional CFO for a few hours a month.");
+    ins("intro_asks", "INSERT INTO intro_asks (title, detail, blurb, min_level) VALUES (?,?,?,100)", "Heads of operations at mid-size clinics", "We are looking for three more design partners.", "Meet the founders of a company helping clinics cut admin time. They are looking for design partners and would value 20 minutes.");
+    ins("intro_asks", "INSERT INTO intro_asks (title, detail, blurb, min_level) VALUES (?,?,?,100)", "A fractional CFO who knows early-stage SaaS", "A few hours a month.", "An early-stage founder is looking for a fractional CFO for a few hours a month.");
   })();
   setSetting("sample_ids", JSON.stringify(ids));
   return true;

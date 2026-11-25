@@ -53,7 +53,7 @@ export function Welcome({ title, children, stage }: { title: React.ReactNode; ch
       <Sprout stage={stage} />
       <div>
         <h1>{title}</h1>
-        {children && <div className="muted" style={{ marginTop: 6, fontSize: 16.5, maxWidth: "62ch" }}>{children}</div>}
+        {children && <div className="sub" style={{ font: "italic 18px/1.5 var(--serif)", color: "var(--muted)", marginTop: 6, maxWidth: "60ch" }}>{children}</div>}
       </div>
     </div>
   );

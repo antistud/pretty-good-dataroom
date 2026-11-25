@@ -278,3 +278,95 @@ kbd { font: 11px/1 var(--sans); border: 1px solid var(--line); border-radius: 5p
 .theme-switch { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; margin-top: 10px; }
 .theme-switch button { border: 0; background: none; color: var(--muted); font: inherit; font-size: 12px; padding: 3px 10px; cursor: pointer; }
 .theme-switch button.on { background: var(--soft); color: var(--brand); font-weight: 600; }
+
+/* =====================================================================
+   The human pass. Less dashboard, more notebook: fewer boxes, a reading
+   column, sentences instead of tiles, and notes that sound like a person.
+   ===================================================================== */
+body { font-size: 16px; line-height: 1.65; }
+.main { max-width: 900px; padding: 44px 48px 96px; }
+.main:has(.board) { max-width: 1240px; }
+h1 { font-size: 36px; font-weight: 500; letter-spacing: -0.015em; }
+h2 { font-size: 22px; font-weight: 500; margin-bottom: 12px; }
+.page-head { margin-bottom: 30px; }
+.page-head .sub { font: italic 18px/1.5 var(--serif); color: var(--muted); }
+
+/* Sections sit on the page instead of in boxes. */
+.card { background: none; border: 0; border-top: 1px solid var(--line); border-radius: 0; box-shadow: none; padding: 26px 0 6px; margin-bottom: 22px; }
+.main > .card:first-child, .page-head + .card, .welcome + .card, .notice + .card, .hint + .card { border-top: 0; padding-top: 4px; }
+.grid2, .grid3 { gap: 8px 44px; margin-bottom: 22px; }
+.grid2 > .card, .grid3 > .card { margin-bottom: 0; }
+.grid3 > .card:has(> .stat) { border-top: 0; padding: 0 0 8px; }
+.center .card { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 34px 32px; box-shadow: var(--shadow); }
+details.card > summary { font-family: var(--serif); font-size: 18px; }
+
+/* Notes in the margin, in a person's voice. */
+.hint { background: none; border: 0; border-left: 2px solid var(--accent); border-radius: 0; padding: 2px 0 2px 20px; margin: 0 0 28px; font: italic 17px/1.6 var(--serif); color: color-mix(in srgb, var(--ink) 82%, var(--muted)); max-width: 68ch; }
+.hint::before { display: none; }
+.hint strong:first-child { font: 600 12px/1.4 var(--sans); font-style: normal; letter-spacing: 0.02em; color: var(--accent); margin-bottom: 4px; }
+.hint a, .hint .btn, .hint form { font-style: normal; }
+.card .hint { background: none; }
+
+/* Quieter furniture. */
+.side { background: var(--bg); padding-top: 28px; }
+.side .brand { font-size: 21px; font-weight: 500; }
+.side .nav-label { text-transform: none; letter-spacing: 0; font: italic 14px/1.4 var(--serif); padding: 16px 10px 2px; }
+.side nav a.active { background: none; color: var(--ink); font-weight: 600; }
+.side nav a:hover { background: color-mix(in srgb, var(--soft) 70%, transparent); }
+.palette-open { background: none; }
+.btn { border-radius: 9px; padding: 8px 16px; }
+.btn.small { border-radius: 7px; }
+.btn.big { border-radius: 11px; }
+.table th { text-transform: none; letter-spacing: 0; font: italic 14px/1.4 var(--serif); }
+.table tbody tr:hover { background: none; }
+.board .col h3 { text-transform: none; letter-spacing: 0; font: italic 15px/1.4 var(--serif); }
+.board .col { background: none; border-style: dashed; }
+.stat { font-weight: 500; font-size: 32px; }
+.empty { border: 0; background: none; font: italic 17px/1.6 var(--serif); padding: 18px 0; text-align: left; }
+.steps li.next { background: none; }
+.steps li.next .step-title::after { content: "  ← start here"; font: italic 14px var(--serif); color: var(--accent); white-space: nowrap; }
+.notice { border-radius: 10px; }
+
+/* Status as a small coloured dot and a word, not a pill. */
+.badge { background: none !important; padding: 0; border-radius: 0; color: var(--muted); font-size: 13px; }
+.badge::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--brand); margin-right: 6px; vertical-align: 1px; }
+.badge.ok::before { background: var(--ok); }
+.badge.warn { color: var(--warn); }
+.badge.warn::before { background: #d99a2b; }
+.badge.bad { color: var(--bad); }
+.badge.bad::before { background: var(--bad); }
+.badge.grey::before { background: var(--line); }
+
+/* A letter: the way the home screens speak. */
+.letter { font: 19px/1.7 var(--serif); max-width: 64ch; margin-bottom: 30px; }
+.letter p { margin: 0 0 14px; }
+.letter a { text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--brand) 40%, transparent); text-underline-offset: 4px; }
+.letter .sig { margin-top: 18px; display: flex; align-items: center; gap: 12px; font-style: italic; color: var(--muted); }
+.todo { list-style: none; counter-reset: todo; padding: 0; margin: 0 0 8px; max-width: 70ch; }
+.todo li { counter-increment: todo; display: grid; grid-template-columns: 34px 1fr auto; gap: 4px 10px; align-items: baseline; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.todo li:last-child { border-bottom: 0; }
+.todo li::before { content: counter(todo) "."; font: 500 20px/1 var(--serif); color: var(--accent); }
+.todo li a.go { white-space: nowrap; font-weight: 600; }
+.quiet-list { list-style: none; padding: 0; margin: 0; }
+.quiet-list li { padding: 7px 0; border-bottom: 1px solid var(--line); }
+.quiet-list li:last-child { border-bottom: 0; }
+.avatar { width: 38px; height: 38px; border-radius: 50%; display: inline-grid; place-items: center; flex: none; background: color-mix(in srgb, var(--accent) 22%, var(--panel)); color: var(--ink); font: 600 14px/1 var(--sans); font-style: normal; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+.avatar + .avatar { margin-left: -14px; }
+blockquote.thought { margin: 8px 0 34px; padding: 0; font: italic 21px/1.5 var(--serif); max-width: 52ch; color: var(--ink); }
+blockquote.thought footer { font: 14px var(--sans); font-style: normal; color: var(--muted); margin-top: 6px; }
+.journey { margin-top: 14px; }
+.ring { width: 64px; height: 64px; }
+.ring::before { inset: 6px; background: var(--bg); }
+.ring b { font-size: 17px; }
+
+@media (max-width: 800px) {
+  .main { padding: 24px 18px 70px; }
+  h1 { font-size: 28px; }
+  .letter { font-size: 17.5px; }
+  .todo li { grid-template-columns: 26px 1fr; }
+  .todo li a.go { grid-column: 2; }
+}
+
+.garden a { width: 86px; }
+.garden a span { max-width: 82px; }
+.linkbtn.muted { color: var(--muted); }

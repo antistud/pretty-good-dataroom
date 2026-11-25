@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Welcome } from "@/components/Garden";
+import { FounderNote } from "@/components/FounderNote";
 import type { Viewer } from "@/lib/auth";
 import { canSeeSection } from "@/lib/auth";
 import { getSetting, q } from "@/lib/db";
@@ -47,9 +48,8 @@ export default async function InvestorHome({ me }: { me: Viewer }) {
 
   return (
     <>
-      <Welcome title={`Welcome, ${me.name.split(" ")[0]}`} stage={Math.round((pctDone / 100) * 4)}>
-        This is {company}&apos;s data room{me.orgName ? <> for <strong>{me.orgName}</strong></> : null}: everything you need to evaluate the company, in the order we suggest you read it.
-      </Welcome>
+      <Welcome title={`Welcome, ${me.name.split(" ")[0]}`} stage={Math.round((pctDone / 100) * 4)} />
+      <FounderNote kind="investor" firstName={me.name.split(" ")[0]} />
 
       <div className="card">
         {allDone ? (
@@ -64,10 +64,10 @@ export default async function InvestorHome({ me }: { me: Viewer }) {
         ) : (
           <>
             <div className="spread">
-              <h2 style={{ margin: 0 }}>Start here</h2>
+              <h2 style={{ margin: 0 }}>The order I would read things in</h2>
               <span className="muted small">{doneCount} of {steps.length} done</span>
             </div>
-            <p className="muted" style={{ marginTop: 6 }}>Follow these steps top to bottom. Each one ticks itself off when you have done it. Most people finish in about 20 minutes.</p>
+            <p className="muted" style={{ marginTop: 6 }}>Each one ticks itself off as you go. Skip around if you prefer; nothing here is locked.</p>
             {next && <p><Link className="btn primary big" href={next.href}>Next: {next.title} →</Link></p>}
           </>
         )}
@@ -77,18 +77,15 @@ export default async function InvestorHome({ me }: { me: Viewer }) {
             <li key={s.key} className={s.done ? "done" : s === next ? "next" : ""}>
               <span className="tick">✓</span>
               <div className="step-body">
-                <div className="step-title">{s.title}{s.optional ? <span className="muted small" style={{ fontWeight: 400 }}> · optional</span> : null}</div>
+                <div className="step-title"><Link href={s.href} style={{ color: "inherit" }}>{s.title}</Link>{s.optional ? <span className="muted small" style={{ fontWeight: 400 }}> · if you like</span> : null}</div>
                 <div className="muted small">{s.body}</div>
               </div>
-              <div className="row nowrap">
-                <Link className={`btn small ${s === next ? "primary" : ""}`} href={s.href}>{s.done ? "Open again" : s.cta}</Link>
-                {!s.done && (
-                  <form action={markStepAction}>
-                    <input type="hidden" name="key" value={s.key} />
-                    <button className="linkbtn small">Mark done</button>
-                  </form>
-                )}
-              </div>
+              {!s.done && (
+                <form action={markStepAction}>
+                  <input type="hidden" name="key" value={s.key} />
+                  <button className="linkbtn small muted" title="Tick this off without opening it">done already</button>
+                </form>
+              )}
             </li>
           ))}
         </ol>

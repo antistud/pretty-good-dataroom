@@ -26,7 +26,7 @@ export async function setupAction(form: FormData) {
   const required = process.env.SETUP_TOKEN;
   if (required && String(form.get("setup_token") ?? "") !== required) flash("/setup", "That setup token is not correct.", "error");
   setSetting("company_name", company);
-  const res = run("INSERT INTO users (email, name, password_hash, role) VALUES (?,?,?, 'founder')", email, name, hashPassword(password));
+  const res = run("INSERT INTO users (email, name, password_hash, role, last_seen_at) VALUES (?,?,?, 'founder', datetime('now'))", email, name, hashPassword(password));
   await createSession(Number(res.lastInsertRowid), false);
   redirect("/home");
 }

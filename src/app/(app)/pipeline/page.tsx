@@ -3,7 +3,7 @@ import { requireStaff } from "@/lib/auth";
 import { q } from "@/lib/db";
 import { money, tierName } from "@/lib/format";
 import { currentRound } from "@/lib/rounds";
-import { STAGES, today, type Lead } from "@/lib/pipeline";
+import { STAGES, humanDay, today, type Lead } from "@/lib/pipeline";
 import { Field, Flash, Hint, PageHead } from "@/components/ui";
 import { Board } from "@/components/Board";
 import { addLeadAction } from "./actions";
@@ -54,11 +54,11 @@ export default async function Pipeline({ searchParams }: { searchParams: Promise
         {rounds.length === 0 && <> You have no round yet: <Link href="/rounds">create one</Link> so commitments have terms to attach to.</>}
       </Hint>
 
-      <div className="grid3">
-        <div className="card"><div className="stat">{money(open, true)}</div><div className="stat-label">In conversation (lead to diligence)</div></div>
-        <div className="card"><div className="stat">{money(committed, true)}</div><div className="stat-label">Committed, signed or wired</div></div>
-        <div className="card"><div className="stat">{money(wired, true)}</div><div className="stat-label">Wired: money in the bank</div></div>
-      </div>
+      {leads.length > 0 && (
+        <p className="letter" style={{ marginBottom: 22 }}>
+          <strong>{money(open, true)}</strong> is in conversation, <strong>{money(committed, true)}</strong> is committed{wired > 0 ? <>, and {money(wired, true)} of that is in the bank</> : null}.
+        </p>
+      )}
 
       <Board
         columns={columns.map((c) => ({ key: c.key, label: c.label }))}
@@ -70,7 +70,7 @@ export default async function Pipeline({ searchParams }: { searchParams: Promise
           cheque: l.check_size != null ? money(l.check_size, true) : null,
           badge: l.org_id != null ? (l.org_kind === "supporter" ? "Supporter" : tierName(l.org_tier ?? 1)) : null,
           badgeGrey: l.org_kind === "supporter",
-          due: l.next_action_due ? { label: l.next_action_due < t ? "Overdue" : l.next_action_due === t ? "Today" : l.next_action_due, warn: l.next_action_due <= t } : null,
+          due: l.next_action_due ? { label: l.next_action_due < t ? "overdue" : humanDay(l.next_action_due).replace(/^on /, ""), warn: l.next_action_due <= t } : null,
           action: l.next_action,
         }))}
       />

@@ -5,8 +5,7 @@ import { mailEnabled } from "@/lib/mail";
 import { Field, Flash, Hint, LevelSelect, PageHead } from "@/components/ui";
 import {
   createPageAction, deletePageAction, saveCompanyAction, saveNdaAction, saveSectionsAction, saveTiersAction,
-  saveUpdateDayAction, testEmailAction, updatePageAction,
-} from "./actions";
+  saveUpdateDayAction, testEmailAction, updatePageAction, saveWelcomeAction } from "./actions";
 
 const SECTIONS: [string, string, string][] = [
   ["overview", "Overview", "The company summary."],
@@ -69,6 +68,18 @@ export default async function Settings({ searchParams }: { searchParams: Promise
             <button className="btn primary">Save</button>
           </form>
         </div>
+      </div>
+
+      <div className="card">
+        <h2>Your welcome, in your own words</h2>
+        <p className="muted" style={{ maxWidth: "66ch" }}>The first thing an investor or supporter reads is a short letter from you, signed with the founders&apos; names. Leave these blank to use a plain default, or write a few sentences the way you would say them.</p>
+        <form action={saveWelcomeAction}>
+          <div className="grid2">
+            <Field label="To investors"><textarea name="welcome_investor" rows={7} defaultValue={getSetting("welcome_investor")} placeholder="Thank you for taking the time to look at us…" /></Field>
+            <Field label="To supporters"><textarea name="welcome_supporter" rows={7} defaultValue={getSetting("welcome_supporter")} placeholder="Thank you for being in our corner…" /></Field>
+          </div>
+          <button className="btn">Save welcome notes</button>
+        </form>
       </div>
 
       <div className="card">

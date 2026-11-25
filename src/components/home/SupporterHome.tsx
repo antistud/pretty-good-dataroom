@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Welcome } from "@/components/Garden";
+import { FounderNote } from "@/components/FounderNote";
 import type { Viewer } from "@/lib/auth";
 import { canSeeSection } from "@/lib/auth";
 import { getSetting, q } from "@/lib/db";
@@ -20,14 +21,8 @@ export default async function SupporterHome({ me }: { me: Viewer }) {
 
   return (
     <>
-      <Welcome title={`Welcome, ${me.name.split(" ")[0]}`} stage={3}>
-        Thank you for backing {company}. This is where you follow along and where you can help.
-      </Welcome>
-
-      <Hint title="What being a supporter means">
-        You get the monthly update: what went well, what did not, and what the founders need. That is it. No paperwork and nothing to review.
-        The best way to help is at the bottom of every update: introduce the founders to someone on their list.
-      </Hint>
+      <Welcome title={`Welcome, ${me.name.split(" ")[0]}`} stage={3} />
+      <FounderNote kind="supporter" firstName={me.name.split(" ")[0]} />
 
       <div className="card">
         <h2>Do this first</h2>

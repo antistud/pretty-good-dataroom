@@ -4,9 +4,8 @@ import { getSetting, q, q1 } from "@/lib/db";
 import { ago, money, monthLabel } from "@/lib/format";
 import { updateDue } from "@/lib/updates";
 import { currentRound, roundTotals } from "@/lib/rounds";
-import { ACTIVE_STAGES, recentExternalActivity, suggestions, today, type Lead } from "@/lib/pipeline";
-import { Hint } from "@/components/ui";
-import { Journey, Sprout, Welcome } from "@/components/Garden";
+import { ACTIVE_STAGES, humanDay, recentExternalActivity, suggestions, today, type Lead } from "@/lib/pipeline";
+import { Sprout, Welcome } from "@/components/Garden";
 import { Greeting } from "@/components/Greeting";
 import { roomHealth } from "@/lib/health";
 import { roomIsEmpty, sampleLoaded } from "@/lib/sample";
@@ -90,115 +89,98 @@ export default async function StaffHome({ me }: { me: Viewer }) {
   const topItems = items.slice(0, 5);
   const moreItems = items.slice(5);
 
+  const stretch: Record<string, string> = { prepare: "getting ready to raise", list: "building your investor list", conversations: "in the thick of investor conversations", diligence: "in diligence", closing: "bringing the round in", tending: "between rounds, keeping your investors close" };
+  const words = (n: number) => ["No", "One", "Two", "Three", "Four", "Five"][n] ?? String(n);
+
   return (
     <>
-      <Welcome title={<Greeting name={firstName} />} stage={Math.min(4, seasonIndex)}>
-        {items.length === 0 ? "Nothing urgent is waiting on you today." : items.length === 1 ? "One thing needs you today." : `${items.length} things need you today. Start at the top; one at a time is plenty.`}
-      </Welcome>
+      <Welcome title={<Greeting name={firstName} />} stage={Math.min(4, seasonIndex)} />
 
       {isSample && (
         <div className="notice warn spread">
-          <span>You are looking at a sample company. None of this is real, and investors cannot see it until you invite them.</span>
-          {me.role === "founder" && <form action={clearSampleAction}><button className="btn small">Clear the sample and start for real</button></form>}
-        </div>
-      )}
-      {canSample && (
-        <Hint title="Want to look around first?">
-          Load a made-up company to see what a raise in full swing looks like: a pipeline, a cap table, six months of financials. One click removes it again.
-          <form action={loadSampleAction} style={{ marginTop: 8 }}><button className="btn small">Show me a sample company</button></form>
-        </Hint>
-      )}
-
-      <div className="card">
-        <div className="spread">
-          <h2 style={{ margin: 0 }}>{season.title}</h2>
-          <Link className="small" href={`/guide#${season.key}`}>Open your founder guide</Link>
-        </div>
-        <Journey stops={SEASONS.map((x) => ({ label: x.label, hint: x.title }))} current={seasonIndex} />
-        <p className="muted" style={{ margin: "10px 0 0", maxWidth: "75ch" }}>{season.summary}</p>
-      </div>
-
-      {setupLeft > 0 && (
-        <div className="card">
-          <div className="spread">
-            <h2 style={{ margin: 0 }}>Get your room ready</h2>
-            <span className="muted small">{setup.length - setupLeft} of {setup.length} done</span>
-          </div>
-          <ul className="steps" style={{ marginTop: 8 }}>
-            {setup.map((s) => (
-              <li key={s.title} className={s.done ? "done" : s === nextSetup ? "next" : ""}>
-                <span className="tick">✓</span>
-                <div className="step-body">
-                  <div className="step-title">{s.title}</div>
-                  {!s.done && <div className="muted small">{s.help}</div>}
-                </div>
-                {!s.done && <Link className={`btn small ${s === nextSetup ? "primary" : ""}`} href={s.href}>{s === nextSetup ? "Do this now" : "Open"}</Link>}
-              </li>
-            ))}
-          </ul>
+          <span>This is a made-up company, here so you can look around. Clear it before you invite anyone real.</span>
+          {me.role === "founder" && <form action={clearSampleAction}><button className="btn small">Clear it and start for real</button></form>}
         </div>
       )}
 
-      {round ? (
-        <div className="card">
-          <div className="spread">
-            <h2 style={{ margin: 0 }}>{round.name} <span className="badge">{round.status}</span></h2>
-            <div className="row"><Link className="btn small" href="/pipeline">Pipeline</Link><Link className="btn small" href="/rounds">Round details</Link></div>
-          </div>
-          <div className="grid3" style={{ margin: "12px 0" }}>
-            <div><div className="stat">{money(total, true)}</div><div className="stat-label">Committed so far{target ? ` of ${money(target, true)}` : ""}</div></div>
-            <div><div className="stat">{money(wired, true)}</div><div className="stat-label">Wired: in the bank</div></div>
-            <div><div className="stat">{leads.length}</div><div className="stat-label">Active conversations</div></div>
-          </div>
-          <div className="progress" style={{ display: "flex" }}>
+      <div className="letter">
+        <p>
+          You are {stretch[season.key] ?? "on your way"}.{" "}
+          {round ? (
+            <>
+              {round.name} stands at <strong>{money(total, true)}</strong>{target ? <> of {money(target, true)}</> : null}
+              {wired > 0 ? <>, with {money(wired, true)} already in the bank</> : null}
+              {leads.length > 0 ? <>, and {leads.length} conversation{leads.length === 1 ? "" : "s"} still alive</> : null}.
+            </>
+          ) : (
+            <>There is no round set up yet; <Link href="/rounds">that is a good place to begin</Link>.</>
+          )}
+        </p>
+        {round && target > 0 && (
+          <div className="progress" style={{ maxWidth: 520, margin: "4px 0 18px" }}>
             <div className="second" style={{ width: widthOf(wired) }} />
             <div style={{ width: widthOf(Math.max(0, total - wired)) }} />
           </div>
-          <div className="muted small" style={{ marginTop: 6 }}>The warm colour is money in the bank; green is committed or signed and still to be wired.</div>
-        </div>
-      ) : setupLeft === 0 ? (
-        <Hint title="No round is open">Create your next round under <Link href="/rounds">Rounds</Link> to track commitments against a target.</Hint>
-      ) : null}
+        )}
+        <p>
+          {items.length === 0
+            ? "Nothing is waiting on you today. A good day to reach out to someone new, or to rest."
+            : items.length === 1
+              ? "Just one thing needs you today:"
+              : `${words(Math.min(items.length, 5))} things need you today. Take them in order; one at a time is plenty.`}
+        </p>
+      </div>
 
-      <div className="card">
-        <h2>Needs you today</h2>
-        {items.length === 0 ? (
-          <div className="empty">Nothing is waiting on you. {leads.length === 0 ? <>Add a lead to the <Link href="/pipeline">pipeline</Link> to get going.</> : "Good moment to reach out to a new investor."}</div>
-        ) : (
-          <>
+      {items.length > 0 && (
+        <>
+          <ol className="todo">
+            {topItems.map((it, i) => (
+              <li key={i}><span>{it.text}</span><Link className="go" href={it.href}>{it.cta} →</Link></li>
+            ))}
+          </ol>
+          {moreItems.length > 0 && (
+            <details style={{ marginBottom: 20 }}>
+              <summary>and {moreItems.length} more, whenever you are ready</summary>
+              <ul className="quiet-list">
+                {moreItems.map((it, i) => <li key={i}>{it.text} <Link href={it.href}>{it.cta}</Link></li>)}
+              </ul>
+            </details>
+          )}
+        </>
+      )}
+
+      {setupLeft > 0 && nextSetup && (
+        <div className="card">
+          <h2>Before your first visitor</h2>
+          <p style={{ maxWidth: "66ch" }}>
+            {setupLeft === setup.length ? "The room is empty, which is exactly where everyone starts." : `${setup.length - setupLeft} of ${setup.length} done.`}{" "}
+            Next: <strong>{nextSetup.title.toLowerCase()}</strong>. {nextSetup.help}
+          </p>
+          <p><Link className="btn primary" href={nextSetup.href}>{nextSetup.title}</Link></p>
+          <details>
+            <summary>See the whole list</summary>
             <ul className="steps">
-              {topItems.map((it, i) => (
-                <li key={i} className={i === 0 ? "next" : ""}>
-                  <span className="tick" style={it.urgent ? { color: "var(--accent)", borderColor: "var(--accent)" } : undefined}>{it.urgent ? "!" : ""}</span>
-                  <div className="step-body">{it.text}</div>
-                  <Link className={`btn small ${i === 0 ? "primary" : ""}`} href={it.href}>{it.cta}</Link>
+              {setup.map((s) => (
+                <li key={s.title} className={s.done ? "done" : ""}>
+                  <span className="tick">✓</span>
+                  <div className="step-body"><div className="step-title">{s.done ? s.title : <Link href={s.href}>{s.title}</Link>}</div></div>
                 </li>
               ))}
             </ul>
-            {moreItems.length > 0 && (
-              <details style={{ marginTop: 10 }}>
-                <summary>{moreItems.length} more, when you are ready</summary>
-                <ul className="steps">
-                  {moreItems.map((it, i) => (
-                    <li key={i}>
-                      <span className="tick" />
-                      <div className="step-body">{it.text}</div>
-                      <Link className="btn small" href={it.href}>{it.cta}</Link>
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            )}
-          </>
-        )}
-      </div>
+          </details>
+          {canSample && (
+            <form action={loadSampleAction} style={{ marginTop: 14 }}>
+              <span className="muted">Rather look around first? </span>
+              <button className="linkbtn">Show me a made-up company</button>
+            </form>
+          )}
+        </div>
+      )}
 
       {plants.length > 0 && (
         <div className="card">
-          <div className="spread">
-            <h2 style={{ margin: 0 }}>Your garden</h2>
-            <span className="muted small">Each investor grows as the conversation does. Blooms are money in the bank.</span>
-          </div>
+          <h2>Your garden</h2>
+          <p className="muted" style={{ marginTop: -6 }}>Everyone you are talking to. They grow as the conversation does, and bloom when the money lands.</p>
           <div className="garden">
             {plants.map((pl) => (
               <Link key={pl.id} href={`/pipeline/${pl.id}`} title={`${pl.org_name}: ${pl.stage}`}>
@@ -211,47 +193,39 @@ export default async function StaffHome({ me }: { me: Viewer }) {
         </div>
       )}
 
-      {setupLeft === 0 && <div className="card">
-        <div className="row" style={{ gap: 20, alignItems: "center", flexWrap: "nowrap" }}>
-          <div className="ring" style={{ ["--p" as string]: health.score } as React.CSSProperties}><b>{health.score}</b></div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h2 style={{ marginBottom: 4 }}>Room health {health.streak > 1 && <span className="badge ok">{health.streak} updates in a row</span>}</h2>
-            {toStrengthen.length === 0 ? (
-              <p className="muted" style={{ margin: 0 }}>Everything an investor expects is in place. Keep it current.</p>
-            ) : (
-              <>
-                <p className="muted small" style={{ marginBottom: 6 }}>How ready the room is for an investor to walk in. The quickest ways to raise it:</p>
-                <div className="row">
-                  {toStrengthen.map((i) => <Link key={i.title} className="btn small" href={i.href} title={i.help}>{i.title}</Link>)}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </div>}
+      <blockquote className="thought">
+        {noteOfTheDay()}
+        <footer>A thought for today · <Link href={`/guide#${season.key}`}>more on {season.label.toLowerCase()} in your guide</Link></footer>
+      </blockquote>
 
-      <Hint title="A thought for today">{noteOfTheDay()}</Hint>
+      {setupLeft === 0 && toStrengthen.length > 0 && (
+        <p className="muted" style={{ maxWidth: "70ch" }}>
+          The room is about {health.score}% of the way to everything an investor expects. The quickest things to add:{" "}
+          {toStrengthen.map((i, n) => <span key={i.title}>{n > 0 ? ", " : ""}<Link href={i.href}>{i.title.toLowerCase()}</Link></span>)}.
+          {health.streak > 1 ? ` You have sent ${health.streak} monthly updates in a row.` : ""}
+        </p>
+      )}
 
       <div className="grid2">
         <div className="card">
           <h2>Coming up</h2>
-          {upcoming.length === 0 ? <p className="muted small">No follow-ups scheduled. Set a next action on each lead card so nothing goes quiet.</p> : (
-            <div className="table-wrap"><table className="table"><tbody>
+          {upcoming.length === 0 ? <p className="muted">Nothing scheduled. Setting a next step on each investor keeps anyone from going quiet.</p> : (
+            <ul className="quiet-list">
               {upcoming.map((l) => (
-                <tr key={l.id}>
-                  <td className="nowrap small muted">{l.next_action_due}</td>
-                  <td><Link href={`/pipeline/${l.id}`}>{l.org_name}</Link><div className="small muted">{l.next_action}</div></td>
-                </tr>
+                <li key={l.id}><Link href={`/pipeline/${l.id}`}>{l.org_name}</Link>: {l.next_action} <span className="muted small">· {humanDay(l.next_action_due)}</span></li>
               ))}
-            </tbody></table></div>
+            </ul>
           )}
         </div>
         <div className="card">
-          <div className="spread"><h2 style={{ margin: 0 }}>Recent investor activity</h2><Link className="small" href="/activity">All activity</Link></div>
-          {recent.length === 0 ? <p className="muted small" style={{ marginTop: 8 }}>Nothing yet. Once investors and supporters sign in, what they look at shows up here.</p> : (
-            <ul className="small" style={{ margin: "10px 0 0", paddingLeft: 20 }}>
-              {recent.map((r) => <li key={r.id}><strong>{r.who}</strong>{r.org ? ` (${r.org})` : ""} {r.what} <span className="muted">· {ago(r.created_at)}</span></li>)}
-            </ul>
+          <h2>Lately in the room</h2>
+          {recent.length === 0 ? <p className="muted">Quiet so far. When investors and supporters sign in, you will see what they read here.</p> : (
+            <>
+              <ul className="quiet-list">
+                {recent.slice(0, 6).map((r) => <li key={r.id}>{r.who} {r.what} <span className="muted small">· {ago(r.created_at)}</span></li>)}
+              </ul>
+              <p style={{ marginTop: 8 }}><Link href="/activity">Everything that has happened</Link></p>
+            </>
           )}
         </div>
       </div>

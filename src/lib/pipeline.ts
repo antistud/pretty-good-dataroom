@@ -130,6 +130,24 @@ export function engagement(orgId: number): Engagement {
 export type Suggestion = { text: string; href: string; urgent?: boolean };
 
 /** Follow-up nudges for one lead, most pressing first. */
+const lowerFirst = (t: string) => (t ? t[0].toLowerCase() + t.slice(1) : t);
+
+/** "yesterday", "on Friday", "on 30 Nov": dates the way a person says them. */
+export function humanDay(day: string | null | undefined): string {
+  if (!day) return "";
+  const [y, m, d] = day.slice(0, 10).split("-").map(Number);
+  const then = Date.UTC(y, m - 1, d);
+  const [ty, tm, td] = today().split("-").map(Number);
+  const diff = Math.round((then - Date.UTC(ty, tm - 1, td)) / 86400_000);
+  if (diff === 0) return "today";
+  if (diff === -1) return "yesterday";
+  if (diff === 1) return "tomorrow";
+  const date = new Date(then);
+  if (diff > 1 && diff < 7) return "on " + date.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
+  if (diff < -1 && diff > -7) return "last " + date.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
+  return "on " + date.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+}
+
 export function suggestions(lead: Lead): Suggestion[] {
   const out: Suggestion[] = [];
   const href = `/pipeline/${lead.id}`;
@@ -138,9 +156,9 @@ export function suggestions(lead: Lead): Suggestion[] {
   const who = lead.org_name;
 
   if (lead.next_action_due && lead.next_action_due < today()) {
-    out.push({ text: `${who}: "${lead.next_action || "next action"}" was due ${lead.next_action_due}.`, href, urgent: true });
+    out.push({ text: `${who}: you meant to ${lowerFirst(lead.next_action || "follow up")} ${humanDay(lead.next_action_due)}. Still worth doing today.`, href, urgent: true });
   } else if (lead.next_action_due === today()) {
-    out.push({ text: `${who}: "${lead.next_action || "next action"}" is due today.`, href, urgent: true });
+    out.push({ text: `${who}: ${lowerFirst(lead.next_action || "follow up")}. You set this for today.`, href, urgent: true });
   }
 
   const lastNote = q1<{ t: string | null }>("SELECT MAX(created_at) AS t FROM lead_notes WHERE lead_id = ?", lead.id)?.t ?? null;
@@ -166,7 +184,7 @@ export function suggestions(lead: Lead): Suggestion[] {
       out.push({ text: `${who} joined but hasn't opened the deck yet.`, href });
     }
   } else if (lead.stage === "interested" || lead.stage === "meeting" || lead.stage === "diligence") {
-    out.push({ text: `${who} is marked ${stageOf(lead.stage).label.toLowerCase()} but has no data room access yet. Invite them.`, href });
+    out.push({ text: `${who} ${lead.stage === "diligence" ? "is in diligence" : lead.stage === "meeting" ? "has met you" : "is interested"} but cannot get into the room yet. Send them an invitation.`, href });
   }
 
   if (lead.stage === "committed" && quietDays >= 7) out.push({ text: `${who} committed ${quietDays} days ago and the SAFE is not marked signed. Chase the signature.`, href, urgent: true });
