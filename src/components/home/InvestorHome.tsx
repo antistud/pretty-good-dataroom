@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Welcome } from "@/components/Path";
 import { FounderNote } from "@/components/FounderNote";
 import type { Viewer } from "@/lib/auth";
 import { canSeeSection } from "@/lib/auth";
@@ -58,7 +57,6 @@ export default async function InvestorHome({ me }: { me: Viewer }) {
 
   return (
     <>
-      <Welcome title={`Welcome, ${me.name.split(" ")[0]}`} />
       <FounderNote kind="investor" firstName={me.name.split(" ")[0]} />
 
       {see("requests") && me.orgId && (

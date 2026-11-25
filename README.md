@@ -82,4 +82,4 @@ See [SECURITY.md](SECURITY.md) for the security model, the operator checklist an
 
 ## Licence
 
-MIT. See [LICENSE](LICENSE). The bundled Caveat typeface is served from this app (no third-party font requests) and is licensed under the SIL Open Font License 1.1.
+MIT. See [LICENSE](LICENSE). The bundled Inter and Instrument Serif typefaces are served from this app (no third-party font requests) and are licensed under the SIL Open Font License 1.1.

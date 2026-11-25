@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Welcome } from "@/components/Path";
 import { FounderNote } from "@/components/FounderNote";
 import type { Viewer } from "@/lib/auth";
 import { canSeeSection } from "@/lib/auth";
@@ -21,7 +20,6 @@ export default async function SupporterHome({ me }: { me: Viewer }) {
 
   return (
     <>
-      <Welcome title={`Welcome, ${me.name.split(" ")[0]}`} />
       <FounderNote kind="supporter" firstName={me.name.split(" ")[0]} />
 
       <div className="card">
@@ -34,7 +32,7 @@ export default async function SupporterHome({ me }: { me: Viewer }) {
       </div>
 
       {canSeeSection(me, "intros") && (
-        <div className="card" style={{ borderColor: "var(--brand)" }}>
+        <div className="card callout">
           <div className="spread">
             <h2 style={{ margin: 0 }}>Set Me Up: who we would love to meet</h2>
             <Link className="btn primary" href="/intros">I can help</Link>

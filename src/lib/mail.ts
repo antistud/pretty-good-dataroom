@@ -40,17 +40,17 @@ export type MailOptions = {
 export function renderEmail(bodyHtml: string, cta?: { label: string; url: string }, opts: MailOptions = {}): string {
   const company = escapeHtml(getSetting("company_name"));
   const button = cta
-    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:26px 0 6px"><tr><td style="background:#111111;border-radius:14px"><a href="${escapeHtml(cta.url)}" style="display:inline-block;padding:12px 22px;color:#ffffff;font:600 15px system-ui,-apple-system,Segoe UI,sans-serif;text-decoration:none">${escapeHtml(cta.label)}</a></td></tr></table>`
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:26px 0 6px"><tr><td style="background:#1b1b19;border-radius:10px"><a href="${escapeHtml(cta.url)}" style="display:inline-block;padding:12px 22px;color:#ffffff;font:600 15px system-ui,-apple-system,Segoe UI,sans-serif;text-decoration:none">${escapeHtml(cta.label)}</a></td></tr></table>`
     : "";
   const footer = opts.transactional
     ? `You are receiving this because you have an account in the ${company} data room.`
     : `You are receiving this because you have access to the ${company} data room. <a href="${baseUrl()}/account#email" style="color:#7a7164">Choose which emails you get</a>.`;
-  return `<!doctype html><html><body style="margin:0;background:#fbfbf9">
+  return `<!doctype html><html><body style="margin:0;background:#f8f7f4">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0">${escapeHtml(opts.preview ?? "")}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fbfbf9"><tr><td align="center" style="padding:28px 14px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8f7f4"><tr><td align="center" style="padding:28px 14px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:580px">
-<tr><td style="font:500 19px Georgia,'Iowan Old Style',serif;color:#111111;padding:0 4px 14px">${company}</td></tr>
-<tr><td style="background:#ffffff;border:2px solid #111111;border-radius:18px;padding:28px 28px 24px;font:16px/1.65 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#111111">${bodyHtml}${button}</td></tr>
+<tr><td style="font:500 19px Georgia,'Iowan Old Style',serif;color:#1b1b19;padding:0 4px 14px">${company}</td></tr>
+<tr><td style="background:#ffffff;border:1px solid #e4e1d9;border-radius:14px;padding:28px 28px 24px;font:16px/1.65 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1b1b19">${bodyHtml}${button}</td></tr>
 <tr><td style="font:12.5px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;color:#7a7164;padding:16px 6px 0">${footer}</td></tr>
 </table></td></tr></table></body></html>`;
 }

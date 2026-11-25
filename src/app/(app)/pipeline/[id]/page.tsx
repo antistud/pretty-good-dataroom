@@ -87,7 +87,7 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
         {lead.stage === "passed" && <span className="badge bad">Passed</span>}
       </div>
 
-      <div className="card" style={{ borderColor: "var(--brand)" }}>
+      <div className="card callout">
         <div className="muted small">Do this next · stage: {stage.label}</div>
         <h2 style={{ marginTop: 4 }}>{stage.action}</h2>
         <p>{stage.todo}</p>

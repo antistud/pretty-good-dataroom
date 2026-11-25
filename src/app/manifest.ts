@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "Data room",
     start_url: "/home",
     display: "standalone",
-    background_color: "#fbfbf9",
-    theme_color: "#fbfbf9",
+    background_color: "#f8f7f4",
+    theme_color: "#f8f7f4",
     icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" }],
   };
 }
