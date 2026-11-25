@@ -1,6 +1,7 @@
 import { OwnerLegend, SplitBar, StageBars, VestBar, byGroup } from "@/components/charts";
 import { Icon } from "@/components/Icon";
 import { ExportBar } from "@/components/Export";
+import { Fragment } from "react";
 import Link from "next/link";
 import { requireSection } from "@/lib/auth";
 import { q } from "@/lib/db";
@@ -167,10 +168,11 @@ export default async function CapTable({ searchParams }: { searchParams: Promise
         ) : (
           <div className="table-wrap">
             <table className="table">
-              <thead><tr><th>Holder</th><th>Type</th><th>Class</th><th className="num">Shares</th><th className="num">Fully diluted</th>{me.isStaff && <th />}</tr></thead>
+              <thead><tr><th>Holder</th><th>Type</th><th>Class</th><th className="num">Shares</th><th className="num">Fully diluted</th></tr></thead>
               <tbody>
                 {holders.map((h) => (
-                  <tr key={h.id}>
+                  <Fragment key={h.id}>
+                  <tr>
                     <td>
                       {h.name}{h.left && <span className="badge grey" style={{ marginLeft: 8 }}>Left {fmtDate(h.end_date)}</span>}
                       {h.vests && <VestBar vested={h.vested} granted={h.granted} left={h.left} />}
@@ -181,19 +183,24 @@ export default async function CapTable({ searchParams }: { searchParams: Promise
                     <td className="small">{h.share_class}</td>
                     <td className="num">{num(h.shares)}</td>
                     <td className="num">{pct(totalShares ? h.shares / totalShares : 0)}</td>
-                    {me.isStaff && (
-                      <td className="right">
+                  </tr>
+                  {me.isStaff && (
+                    <tr className="edit-row">
+                      <td colSpan={5}>
                         <details>
-                          <summary className="small">Edit</summary>
-                          {holderForm(h)}
-                          <form action={deleteHolderAction} style={{ marginTop: 8 }}><input type="hidden" name="id" value={h.id} /><button className="linkbtn small danger">Remove {h.name}</button></form>
+                          <summary className="small">Edit {h.name}</summary>
+                          <div className="edit-panel">
+                            {holderForm(h)}
+                            <form action={deleteHolderAction} style={{ marginTop: 8 }}><input type="hidden" name="id" value={h.id} /><button className="linkbtn small danger">Remove {h.name}</button></form>
+                          </div>
                         </details>
                       </td>
-                    )}
-                  </tr>
+                    </tr>
+                  )}
+                  </Fragment>
                 ))}
               </tbody>
-              <tfoot><tr><td colSpan={3}>Total</td><td className="num">{num(totalShares)}</td><td className="num">100.00%</td>{me.isStaff && <td />}</tr></tfoot>
+              <tfoot><tr><td colSpan={3}>Total</td><td className="num">{num(totalShares)}</td><td className="num">100.00%</td></tr></tfoot>
             </table>
           </div>
         )}
@@ -215,13 +222,14 @@ export default async function CapTable({ searchParams }: { searchParams: Promise
         ) : (
           <div className="table-wrap">
             <table className="table">
-              <thead><tr><th>Investor</th><th className="num">Amount</th><th className="num">Cap</th><th className="num">Discount</th><th>Terms</th><th>Status</th><th>Document</th>{me.isStaff && <th />}</tr></thead>
+              <thead><tr><th>Investor</th><th className="num">Amount</th><th className="num">Cap</th><th className="num">Discount</th><th>Terms</th><th>Status</th><th>Document</th></tr></thead>
               <tbody>
                 {safes.map((s) => {
                   const doc = s.document_id ? getDocument(s.document_id) : undefined;
                   const canOpen = doc && doc.effective_level <= me.level;
                   return (
-                    <tr key={s.id}>
+                    <Fragment key={s.id}>
+                    <tr>
                       <td>{s.investor_name}<div className="muted small">{[s.round_name, s.signed_on && fmtDate(s.signed_on)].filter(Boolean).join(" · ")}</div></td>
                       <td className="num">{money(s.amount)}</td>
                       <td className="num">{s.valuation_cap ? money(s.valuation_cap) : "None"}</td>
@@ -229,20 +237,25 @@ export default async function CapTable({ searchParams }: { searchParams: Promise
                       <td className="small">{s.kind === "post" ? "Post-money" : "Pre-money"}{s.mfn ? " · MFN" : ""}</td>
                       <td><span className={`badge ${STATUS_BADGE[s.status]}`}>{s.status}</span></td>
                       <td className="small">{canOpen ? <Link href={`/documents/${doc!.id}`}>{doc!.name}</Link> : doc ? <span className="muted">On file</span> : <span className="muted">—</span>}</td>
-                      {me.isStaff && (
-                        <td className="right">
+                    </tr>
+                    {me.isStaff && (
+                      <tr className="edit-row">
+                        <td colSpan={7}>
                           <details>
-                            <summary className="small">Edit</summary>
-                            {safeForm(s)}
-                            <form action={deleteSafeAction} style={{ marginTop: 8 }}><input type="hidden" name="id" value={s.id} /><button className="linkbtn small danger">Remove this SAFE</button></form>
+                            <summary className="small">Edit {s.investor_name}</summary>
+                            <div className="edit-panel">
+                              {safeForm(s)}
+                              <form action={deleteSafeAction} style={{ marginTop: 8 }}><input type="hidden" name="id" value={s.id} /><button className="linkbtn small danger">Remove this SAFE</button></form>
+                            </div>
                           </details>
                         </td>
-                      )}
-                    </tr>
+                      </tr>
+                    )}
+                    </Fragment>
                   );
                 })}
               </tbody>
-              <tfoot><tr><td>Total</td><td className="num">{money(safeTotal)}</td><td colSpan={me.isStaff ? 6 : 5} /></tr></tfoot>
+              <tfoot><tr><td>Total</td><td className="num">{money(safeTotal)}</td><td colSpan={5} /></tr></tfoot>
             </table>
           </div>
         )}

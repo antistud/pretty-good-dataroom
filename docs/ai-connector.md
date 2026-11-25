@@ -13,6 +13,18 @@ The data room contains no AI of its own and never sends your files anywhere. You
 
 It can suggest the company profile and overview, the team, the cap table, a round and SAFEs, and say how each of your documents should be filed.
 
+## Corrections, dates and updates
+
+The assistant can fix what is already in the room, not only add to it. Ask it in plain words: "Jeff Stafford left on 20 October 2025", "the TN Funds SAFE was signed on 14 February and has been wired", "September's closing cash was $150,000".
+
+- It matches by name, so it only sends the name and the field that changes.
+- The review screen shows each change as old → new, and you tick the ones to apply.
+- It can set start dates, vesting periods, cliffs and leaving dates on the cap table; signing dates, status and terms on SAFEs; round terms; team titles and bios; and monthly revenue, expenses and cash.
+- Dates can be written most ways ("March 1, 2026", "3/1/2026", "2026-03-01"). Slashed dates are read as month/day/year.
+- If it sends something the room cannot read or apply, the room tells both of you why, instead of dropping it.
+
+It cannot open or close a round, change who sees what, delete anything, or clear a field once set. Do those in the room.
+
 ## Getting the files themselves into the room
 
 An assistant cannot upload files. It does not hold the original file, only what it read from it, and a signed SAFE that arrived slightly altered would be worse than a missing one. So the assistant does the filing and you do the drop:

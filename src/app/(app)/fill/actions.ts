@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { q1, run } from "@/lib/db";
 import { appUrl, hashToken, requireStaff } from "@/lib/auth";
@@ -61,6 +62,8 @@ export async function applyProposalAction(form: FormData) {
   const done = applyAnswer(answer!, picked);
   run("UPDATE proposals SET status = 'applied' WHERE id = ?", id);
   logActivity(me, "proposal.apply", undefined, undefined, done.join(", ") || "nothing selected");
+  // The company name sits in the header shared by every page.
+  revalidatePath("/", "layout");
   flash("/fill", done.length ? `Added: ${done.join(", ")}. Have a look at each page and adjust anything that is not quite right.` : "Nothing was ticked, so nothing was added.", "ok", done.length ? "ready" : undefined);
 }
 

@@ -86,6 +86,9 @@ to an AI assistant of their choice.
   folder. Files the room cannot place go to a founders-only folder.
 - **What it can write:** suggestions only. A suggestion is stored as pending
   and changes nothing until a founder reviews and applies it, item by item.
+  A suggestion can add entries or change fields on existing ones (shown to
+  the founder as old → new); it cannot delete, open or close a round, or
+  change access.
   This is deliberate: documents handed to an assistant can contain text that
   tries to steer it, and an assistant can simply be wrong.
 - Wrong keys are limited to 20 per caller per 15 minutes.

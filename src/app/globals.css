@@ -687,3 +687,18 @@ details.hint > div { border-left: 2px solid var(--accent); padding: 2px 0 2px 16
 .noted ul { margin: 8px 0 0; padding-left: 18px; }
 .noted li { margin-bottom: 4px; overflow-wrap: anywhere; }
 @media print { #add, #filed { display: none; } }
+
+/* ---------- Editing a table row: the form opens underneath, across the full width ---------- */
+.table tr:has(+ .edit-row) td { border-bottom: 0; padding-bottom: 4px; }
+.table .edit-row td { padding: 0 0 10px; text-align: right; }
+.table .edit-row summary { display: inline-block; cursor: pointer; color: var(--accent); }
+.table .edit-row details[open] { text-align: left; }
+.table .edit-row details[open] > summary { margin-bottom: 12px; font-weight: 600; color: var(--ink); }
+.edit-panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 18px 18px 14px; margin-bottom: 6px; animation: rise 0.25s var(--ease) both; }
+@media screen and (max-width: 800px) { .table tr:has(+ .edit-row) { border-bottom: 0; padding-bottom: 0; } .table tr.edit-row { padding-top: 0; } .table .edit-row td { text-align: right !important; } .table .edit-row details[open] { text-align: left; } }
+@media print { .table .edit-row { display: none; } }
+
+/* What a suggested entry would set or change. */
+.changes { list-style: none; padding: 0; margin: 3px 0 0; font-size: 14.5px; }
+.changes li { margin: 1px 0; overflow-wrap: anywhere; }
+.changes s { text-decoration-thickness: 1px; }

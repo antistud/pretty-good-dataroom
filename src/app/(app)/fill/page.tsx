@@ -3,9 +3,9 @@ import { cookies } from "next/headers";
 import { appUrl, requireStaff } from "@/lib/auth";
 import { CONNECTOR_DAYS } from "@/lib/mcp";
 import { getSetting, q } from "@/lib/db";
-import { ago, money, num } from "@/lib/format";
+import { ago } from "@/lib/format";
 import { documentsPrompt, parseAnswer } from "@/lib/docfill";
-import { COMPANY_FIELDS, describe } from "@/lib/docfill-apply";
+import { describe, type Plan } from "@/lib/docfill-apply";
 import { Field, Flash, PageHead } from "@/components/ui";
 import { CopyButton } from "@/components/CopyButton";
 import { FilingBox } from "@/components/FilingBox";
@@ -19,6 +19,33 @@ const Tick = ({ name, checked = true, children }: { name: string; checked?: bool
     <span style={{ minWidth: 0 }}>{children}</span>
   </label>
 );
+
+/** One group of suggested entries: new ones and updates can be ticked; unchanged and unusable ones are explained. */
+function Plans({ title, plans, prefix, single, note }: { title: string; plans: Plan[]; prefix: string; single?: boolean; note?: string }) {
+  if (plans.length === 0) return null;
+  return (
+    <>
+      <h3 style={{ marginTop: 16 }}>{title}</h3>
+      {plans.map((p, i) => {
+        if (p.kind === "same") return <p key={i} className="muted" style={{ margin: "7px 0 7px 26px" }}>{p.title} <span className="badge grey">already up to date</span></p>;
+        if (p.kind === "invalid") return <p key={i} className="muted" style={{ margin: "7px 0 7px 26px" }}>{p.title} <span className="badge warn">cannot be applied</span><span className="small" style={{ display: "block" }}>{p.why}</span></p>;
+        return (
+          <Tick key={i} name={single ? prefix : `${prefix}${i}`}>
+            <strong>{p.title}</strong>
+            {p.kind === "new" ? <span className="badge ok" style={{ marginLeft: 8 }}>new</span> : <span className="badge warn" style={{ marginLeft: 8 }}>update</span>}
+            {p.kind === "new" && p.summary && <span className="muted"> · {p.summary}</span>}
+            <ul className="changes">
+              {p.changes.filter((c) => p.kind === "update" || !["Shares granted", "Amount", "Target", "Title", "Bio"].includes(c.label) || !p.summary).map((c) => (
+                <li key={c.label}><span className="muted">{c.label}:</span> {p.kind === "update" && <><s className="muted">{c.from}</s> → </>}{c.to}</li>
+              ))}
+            </ul>
+            {p.kind === "new" && note && <div className="muted small">{note}</div>}
+          </Tick>
+        );
+      })}
+    </>
+  );
+}
 
 export default async function Fill({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const me = await requireStaff();
@@ -49,53 +76,29 @@ export default async function Fill({ searchParams }: { searchParams: Promise<Rec
                 <p className="muted" style={{ marginTop: -6 }}>{p.source === "assistant" ? "Sent by your connected assistant" : "From the answer you pasted"} · {ago(p.created_at)}. Untick anything that is wrong. Nothing is saved until you press the button.</p>
                 <form action={applyProposalAction}>
                   <input type="hidden" name="proposal_id" value={p.id} />
-                  {a.company && COMPANY_FIELDS.some(([k]) => a.company![k]) && (
+                  {d.company.length > 0 && (
                     <>
                       <h3>Company</h3>
-                      {COMPANY_FIELDS.filter(([k]) => a.company![k]).map(([key, label]) => {
-                        const now = d.current[key];
-                        const value = a.company![key];
-                        const replaces = !!now && now.trim() !== value.trim();
-                        return (
-                          <Tick key={key} name={`c_${key}`} checked={!replaces}>
-                            <strong>{label}</strong>{replaces && <span className="badge warn" style={{ marginLeft: 8 }}>replaces what you have</span>}{now && !replaces && <span className="badge grey" style={{ marginLeft: 8 }}>same as now</span>}
-                            {key === "overview_markdown" ? <details><summary>Read it ({value.split(/\s+/).length} words)</summary><div className="template">{value}</div></details> : <div>{value}</div>}
+                      {d.company.map((c) => c.kind === "same"
+                        ? <p key={c.key} className="muted" style={{ margin: "7px 0 7px 26px" }}>{c.label} <span className="badge grey">already says this</span></p>
+                        : (
+                          <Tick key={c.key} name={`c_${c.key}`} checked={!(c.kind === "update" && c.key === "overview_markdown")}>
+                            <strong>{c.label}</strong>{c.kind === "update" && <span className="badge warn" style={{ marginLeft: 8 }}>replaces what you have</span>}
+                            {c.key === "overview_markdown" ? <details><summary>Read it ({c.value.split(/\s+/).length} words)</summary><div className="template">{c.value}</div></details> : <div>{c.kind === "update" && <span className="muted"><s>{c.now}</s> → </span>}{c.value}</div>}
                           </Tick>
-                        );
-                      })}
+                        ))}
                     </>
                   )}
-                  {a.team.length > 0 && (
-                    <>
-                      <h3 style={{ marginTop: 16 }}>Team</h3>
-                      {a.team.map((m, i) => d.teamExists(m.name)
-                        ? <p key={i} className="muted" style={{ margin: "7px 0 7px 26px" }}>{m.name} <span className="badge grey">already on the team page</span></p>
-                        : <Tick key={i} name={`t_${i}`}><strong>{m.name}</strong>{m.title ? `, ${m.title}` : ""}{m.bio && <div className="muted">{m.bio}</div>}</Tick>)}
-                    </>
-                  )}
-                  {a.holders.length > 0 && (
-                    <>
-                      <h3 style={{ marginTop: 16 }}>Cap table</h3>
-                      {a.holders.map((h, i) => d.holderExists(h.name)
-                        ? <p key={i} className="muted" style={{ margin: "7px 0 7px 26px" }}>{h.name} <span className="badge grey">already on the cap table</span></p>
-                        : <Tick key={i} name={`h_${i}`}><strong>{h.name}</strong> · {num(h.shares)} {h.share_class} shares <span className="muted">· {h.kind === "pool" ? "unissued option pool" : h.kind}</span></Tick>)}
-                    </>
-                  )}
-                  {a.round && (
-                    <>
-                      <h3 style={{ marginTop: 16 }}>Round</h3>
-                      {d.roundExists(a.round.name)
-                        ? <p className="muted" style={{ margin: "7px 0 7px 26px" }}>{a.round.name} <span className="badge grey">a round with this name already exists</span></p>
-                        : <Tick name="r"><strong>{a.round.name}</strong>: raising {money(a.round.target_amount)} {a.round.instrument === "safe" ? "on SAFEs" : "in a priced round"}{a.round.valuation_cap ? ` at a ${money(a.round.valuation_cap, true)} cap` : ""}{a.round.discount_percent ? `, ${a.round.discount_percent}% discount` : ""}{a.round.min_check ? `, ${money(a.round.min_check)} minimum` : ""}.{a.round.use_of_funds && <div className="muted">{a.round.use_of_funds}</div>}<div className="muted small">Created in planning; investors see nothing until you open it.</div></Tick>}
-                    </>
-                  )}
-                  {a.safes.length > 0 && (
-                    <>
-                      <h3 style={{ marginTop: 16 }}>SAFEs</h3>
-                      {a.safes.map((s, i) => d.safeExists(s.investor, s.amount)
-                        ? <p key={i} className="muted" style={{ margin: "7px 0 7px 26px" }}>{s.investor} · {money(s.amount)} <span className="badge grey">already recorded</span></p>
-                        : <Tick key={i} name={`s_${i}`}><strong>{s.investor}</strong> · {money(s.amount)}{s.valuation_cap ? ` at a ${money(s.valuation_cap, true)} cap` : ", no cap"}{s.discount_percent ? `, ${s.discount_percent}% discount` : ""} <span className="muted">· {s.type === "post" ? "post-money" : "pre-money"}{s.mfn ? ", MFN" : ""}{s.signed_on ? `, signed ${s.signed_on}` : ""}</span></Tick>)}
-                    </>
+                  <Plans title="Team" plans={d.team} prefix="t_" />
+                  <Plans title="Cap table" plans={d.holders} prefix="h_" />
+                  {d.round && <Plans title="Round" plans={[d.round]} prefix="r" single note="A new round is created in planning; investors see nothing until you open it." />}
+                  <Plans title="SAFEs" plans={d.safes} prefix="s_" />
+                  <Plans title="Financials" plans={d.financials} prefix="f_" />
+                  {a.ignored.length > 0 && (
+                    <div className="notice warn" style={{ marginTop: 16 }}>
+                      <strong>Sent, but could not be read</strong>
+                      <ul style={{ margin: "6px 0 0" }}>{a.ignored.map((u, i) => <li key={i}>{u}</li>)}</ul>
+                    </div>
                   )}
                   {a.unsure.length > 0 && (
                     <div className="notice warn" style={{ marginTop: 16 }}>

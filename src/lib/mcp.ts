@@ -6,6 +6,7 @@ import { parseAnswer } from "./docfill";
 import { notify } from "./notify";
 import { listHolders } from "./rounds";
 import { cleanHints, fileKey } from "./filing";
+import { tally } from "./docfill-apply";
 
 /**
  * A small MCP server, so a founder can connect the AI assistant they already
@@ -63,20 +64,21 @@ export function newConnectorToken(): string {
 const instructions = (canRead: boolean) =>
   `This is the investor data room for ${getSetting("company_name")}. Use it to help the founder fill the room from documents they share with you (pitch deck, formation documents, stock agreements, signed SAFEs). ` +
   (canRead ? "Call get_room first to see what is already there. Then call" : "Call") +
-  ` propose_changes with only what the documents actually say: never guess or fill gaps, use plain numbers for amounts and share counts, and list anything missing, unsigned or contradictory under "unsure". ` +
+  ` propose_changes with only what the documents actually say: never guess or fill gaps, use plain numbers for amounts and share counts and YYYY-MM-DD for dates, and list anything missing, unsigned or contradictory under "unsure". It can correct existing entries as well as add new ones: send the name and only the fields that change. Read its reply; it names any value it could not read so you can send it again. ` +
   (canRead ? "" : "This connection can send suggestions but cannot read the room; the data room itself flags anything that is already there, so send everything the documents support. ") +
   `Your proposal is a suggestion. The founder reviews and applies it inside the data room; tell them to open "From your documents" there when you are done. ` +
   `Then call file_documents with every file they shared, so that when they upload the files to the room each one is named and filed correctly. You cannot upload files yourself.`;
 
 const nullable = (type: string, description: string) => ({ type: [type, "null"], description });
+const DATE = "A date as YYYY-MM-DD.";
 const PROPOSE_SCHEMA = {
   type: "object",
-  additionalProperties: false,
   properties: {
     company: {
       type: ["object", "null"],
-      description: "Company profile, mostly from the pitch deck. Omit or null if the documents do not cover it.",
+      description: "Company profile, mostly from the pitch deck. Include only the fields you want to set or change.",
       properties: {
+        name: nullable("string", "The company's name."),
         one_liner: nullable("string", "Who it is for and what it does, under 15 words, plain English, not a slogan."),
         overview_markdown: nullable("string", "250-400 words for an investor. Only these headings, each on its own line: '## The problem', '## What we do', '## Why now', '## Traction', '## Team', '## The ask'. Plain paragraphs, '- ' lists, '**bold**' for an occasional key number. Leave out sections the documents do not support."),
         stage: nullable("string", "For example Pre-seed."),
@@ -87,25 +89,36 @@ const PROPOSE_SCHEMA = {
     },
     team: {
       type: "array",
-      description: "Founders and team shown in the deck.",
+      description: "People on the team page. Someone already there (same name) is updated with the fields you give.",
       items: { type: "object", required: ["name"], properties: { name: { type: "string" }, title: nullable("string", "Role."), bio: nullable("string", "Two or three sentences."), link: nullable("string", "LinkedIn or personal https:// address, if shown.") } },
     },
     holders: {
       type: "array",
-      description: "Issued shares and the reserved option pool only, from formation documents, stock purchase agreements or a cap table. Do NOT list SAFE investors here.",
+      description:
+        "Shareholders and the reserved option pool, from formation documents, stock purchase agreements or a cap table. Do NOT list SAFE investors here. A holder already on the cap table (same name) is updated: send only the name and the fields that change, for example a leaving date. A new holder needs 'shares'.",
       items: {
         type: "object",
-        required: ["name", "shares"],
-        properties: { name: { type: "string", description: "Person or entity; 'Option pool' for unissued reserved shares." }, kind: { type: "string", enum: ["founder", "employee", "advisor", "investor", "pool"] }, share_class: nullable("string", "For example Common."), shares: { type: "number", description: "Whole number of shares." } },
+        required: ["name"],
+        properties: {
+          name: { type: "string", description: "Person or entity; 'Option pool' for unissued reserved shares." },
+          kind: { type: "string", enum: ["founder", "employee", "advisor", "investor", "pool"] },
+          share_class: nullable("string", "For example Common."),
+          shares: nullable("number", "Whole number of shares originally granted or bought (not the vested number)."),
+          start_date: nullable("string", `When they started and vesting began. ${DATE}`),
+          vest_months: nullable("number", "Length of the vesting schedule in months, for example 48. Omit if the shares do not vest."),
+          cliff_months: nullable("number", "Months before anything vests, for example 12."),
+          end_date: nullable("string", `The day they left the company, if they have. ${DATE} The room then counts only the shares vested by that day.`),
+          notes: nullable("string", "A short note, for example 'Acceleration on change of control'."),
+        },
       },
     },
     round: {
       type: ["object", "null"],
-      description: "The raise the pitch deck asks for. Null if the documents do not describe one.",
+      description: "The raise. A round with the same name is updated with the fields you give; a new one needs target_amount and is created in planning. You cannot open or close a round.",
       properties: {
         name: nullable("string", "For example Pre-seed."),
         instrument: { type: "string", enum: ["safe", "priced"] },
-        target_amount: { type: "number", description: "US dollars, plain number." },
+        target_amount: nullable("number", "US dollars, plain number."),
         valuation_cap: nullable("number", "US dollars."),
         discount_percent: nullable("number", "20 for 20%."),
         pre_money: nullable("number", "US dollars, priced rounds only."),
@@ -115,11 +128,29 @@ const PROPOSE_SCHEMA = {
     },
     safes: {
       type: "array",
-      description: "One entry per signed SAFE document.",
+      description: "One entry per SAFE. A SAFE already recorded for that investor is updated with the fields you give (include the amount if the investor has more than one). A new one needs 'amount'.",
       items: {
         type: "object",
-        required: ["investor", "amount"],
-        properties: { investor: { type: "string" }, amount: { type: "number", description: "US dollars." }, valuation_cap: nullable("number", "US dollars."), discount_percent: nullable("number", "20 for 20%."), type: { type: "string", enum: ["post", "pre"], description: "post-money or pre-money SAFE." }, mfn: { type: "boolean" }, signed_on: nullable("string", "YYYY-MM-DD."), status: { type: "string", enum: ["signed", "wired"] } },
+        required: ["investor"],
+        properties: {
+          investor: { type: "string" },
+          amount: nullable("number", "US dollars."),
+          valuation_cap: nullable("number", "US dollars."),
+          discount_percent: nullable("number", "20 for 20%."),
+          type: { type: "string", enum: ["post", "pre"], description: "post-money or pre-money SAFE." },
+          mfn: { type: "boolean" },
+          signed_on: nullable("string", `The date it was signed. ${DATE}`),
+          status: { type: "string", enum: ["committed", "signed", "wired"] },
+        },
+      },
+    },
+    financials: {
+      type: "array",
+      description: "Monthly figures, one entry per month, only when a document gives them. An existing month is updated with the fields you give; a new month needs 'cash'.",
+      items: {
+        type: "object",
+        required: ["month"],
+        properties: { month: { type: "string", description: "YYYY-MM." }, revenue: nullable("number", "US dollars received that month."), expenses: nullable("number", "US dollars spent that month."), cash: nullable("number", "Bank balance on the last day of the month, US dollars."), notes: nullable("string", "Anything unusual about the month.") },
       },
     },
     unsure: { type: "array", items: { type: "string" }, description: "Anything missing, unclear, unsigned or contradictory that the founder should check." },
@@ -130,7 +161,7 @@ const TOOLS = [
   {
     name: "get_room",
     title: "See what is in the data room",
-    description: "Returns the company profile, team, cap table, rounds and SAFEs currently in the data room, and what is still missing. Call this first so you do not propose things that are already there.",
+    description: "Returns everything propose_changes can set, as it stands now: company profile, team, cap table (with grant, vesting and leaving dates), rounds, SAFEs and monthly financials, plus what is still missing. Call this first so you only send what is new or different.",
     inputSchema: { type: "object", additionalProperties: false },
     annotations: { readOnlyHint: true, openWorldHint: false },
   },
@@ -138,7 +169,7 @@ const TOOLS = [
     name: "propose_changes",
     title: "Suggest details for the data room",
     description:
-      "Saves a set of suggested details, taken from documents the founder shared with you, for the founder to review inside the data room. Nothing becomes visible to investors until the founder applies it there. Use only facts stated in the documents; never guess. Include only the sections you have evidence for.",
+      "Suggests additions AND corrections to the data room, for the founder to review there. Entries are matched by name: someone already on the cap table, a SAFE already recorded or a month already entered is UPDATED with just the fields you send, so to add a leaving date or fix a signing date, send the name and that one field. Nothing changes until the founder applies it. Use only facts from the documents or from what the founder told you; never guess. Dates are YYYY-MM-DD, amounts plain numbers. The reply says what was understood and lists any value that could not be read.",
     inputSchema: PROPOSE_SCHEMA,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
   },
@@ -188,10 +219,17 @@ function roomSnapshot() {
     location: getSetting("fact_location") || null,
     website: getSetting("fact_website") || null,
   };
-  const team = q<{ name: string; title: string | null }>("SELECT name, title FROM team_members ORDER BY position, id");
-  const holders = listHolders().map((h) => ({ name: h.name, kind: h.kind, share_class: h.share_class, shares: h.shares, ...(h.left ? { left_on: h.end_date } : {}) }));
-  const rounds = q("SELECT name, instrument, status, target_amount, valuation_cap, discount, min_check FROM rounds ORDER BY id");
-  const safes = q("SELECT investor_name AS investor, amount, valuation_cap, discount, kind AS type, status, signed_on FROM safes ORDER BY id");
+  const team = q<{ name: string; title: string | null; bio: string | null; link: string | null }>("SELECT name, title, bio, link FROM team_members ORDER BY position, id");
+  // "shares" is what counts today; "shares_granted" is the original grant, which is what propose_changes takes.
+  const holders = listHolders().map((h) => ({
+    name: h.name, kind: h.kind, share_class: h.share_class, shares: h.shares, shares_granted: h.granted,
+    start_date: h.start_date, vest_months: h.vest_months, cliff_months: h.cliff_months, end_date: h.end_date, shares_vested: h.vested, notes: h.notes,
+  }));
+  const rounds = q<Record<string, unknown>>("SELECT name, instrument, status, target_amount, valuation_cap, discount, pre_money, min_check, opened_at, closed_at FROM rounds ORDER BY id")
+    .map(({ discount, ...r }) => ({ ...r, discount_percent: typeof discount === "number" ? +(discount * 100).toFixed(4) : null }));
+  const safes = q<Record<string, unknown>>("SELECT investor_name AS investor, amount, valuation_cap, discount, kind AS type, mfn, status, signed_on, document_id FROM safes ORDER BY id")
+    .map(({ discount, mfn, document_id, ...x }) => ({ ...x, discount_percent: typeof discount === "number" ? +(discount * 100).toFixed(4) : null, mfn: !!mfn, signed_copy_uploaded: document_id != null }));
+  const financials = q("SELECT month, revenue, expenses, cash, notes FROM financials ORDER BY month");
   const missing = [
     !company.one_liner && "one-line description",
     !company.overview_markdown && "overview",
@@ -199,7 +237,7 @@ function roomSnapshot() {
     !holders.length && "cap table",
     !rounds.length && "a round",
   ].filter(Boolean);
-  return { company, team, holders, rounds, safes, missing };
+  return { company, team, holders, rounds, safes, financials, missing };
 }
 
 function callTool(user: McpUser, name: string, args: unknown): { content: { type: "text"; text: string }[]; isError?: boolean; structuredContent?: unknown } | null {
@@ -211,13 +249,15 @@ function callTool(user: McpUser, name: string, args: unknown): { content: { type
   }
   if (name === "propose_changes") {
     const answer = parseAnswer(JSON.stringify(args ?? {}));
-    if (!answer) return text("Nothing usable was provided. Include at least one of: company, team, holders, round (with target_amount), safes (each with investor and amount).", true);
+    if (!answer) return text("Nothing usable was provided. Include at least one of: company, team, holders, round, safes, financials. Dates are YYYY-MM-DD and amounts are plain numbers.", true);
     const pending = q1<{ n: number }>("SELECT COUNT(*) AS n FROM proposals WHERE user_id = ? AND status = 'pending'", user.id)?.n ?? 0;
     if (pending >= 10) return text("There are already 10 suggestions waiting for the founder. Ask them to review or dismiss those in the data room first.", true);
     run("INSERT INTO proposals (user_id, source, payload) VALUES (?, 'assistant', ?)", user.id, JSON.stringify(answer));
     logActivity({ id: user.id, orgId: null }, "proposal.create", undefined, undefined, "from a connected AI assistant");
-    const counts = [answer.company && "company profile", answer.team.length && `${answer.team.length} team`, answer.holders.length && `${answer.holders.length} shareholders`, answer.round && "a round", answer.safes.length && `${answer.safes.length} SAFEs`].filter(Boolean).join(", ");
-    return text(`Saved as a suggestion (${counts}). Nothing is live yet. Tell the founder to open the data room, go to The room → From your documents, and review it: ${(process.env.APP_URL || "").replace(/\/$/, "")}/fill`);
+    const t = tally(answer);
+    const made = [t.new && `${t.new} new`, t.update && `${t.update} update${t.update === 1 ? "" : "s"} to existing entries`, t.same && `${t.same} already up to date`, t.invalid && `${t.invalid} that cannot be applied as sent`].filter(Boolean).join(", ");
+    const trouble = answer.ignored.length ? ` These values could not be read and were left out; send them again in the right form: ${answer.ignored.join(" ")}` : "";
+    return text(`Saved as a suggestion: ${made}. Nothing is live yet. Tell the founder to open the data room, go to The room → From your documents, and review it: ${(process.env.APP_URL || "").replace(/\/$/, "")}/fill.${trouble}`);
   }
   if (name === "file_documents") {
     const hints = cleanHints(args);
