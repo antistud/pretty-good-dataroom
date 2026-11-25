@@ -35,7 +35,7 @@ export default async function Pipeline({ searchParams }: { searchParams: Promise
 
   return (
     <>
-      <PageHead title="Pipeline" sub="Every investor you are talking to, and the one thing to do next for each.">
+      <PageHead title="Investors" sub="Every investor you are talking to, and the one thing to do next for each.">
         {rounds.length > 0 && (
           <form className="row" method="get">
             <select name="round" defaultValue={String(selected)} style={{ width: "auto" }}>

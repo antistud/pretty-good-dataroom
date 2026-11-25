@@ -87,7 +87,14 @@ export default async function StaffHome({ me }: { me: Viewer }) {
   const toStrengthen = health.items.filter((i) => !i.done).slice(0, 3);
   const isSample = sampleLoaded();
   const canSample = me.role === "founder" && !isSample && roomIsEmpty();
-  const STEPS = ["lead", "contacted", "interested", "meeting", "diligence", "committed", "signed", "wired"];
+  const GROUPS: [string, string[]][] = [
+    ["In the bank", ["wired"]],
+    ["Signed, waiting on the wire", ["signed"]],
+    ["Committed", ["committed"]],
+    ["In diligence", ["diligence"]],
+    ["Talking", ["interested", "meeting"]],
+    ["Not yet in conversation", ["lead", "contacted"]],
+  ];
   const standing = q<{ id: number; org_name: string; stage: string; check_size: number | null }>(
     `SELECT id, org_name, stage, check_size FROM leads WHERE stage != 'passed' ${round ? "AND (round_id = ? OR round_id IS NULL)" : ""}
       ORDER BY CASE stage WHEN 'wired' THEN 0 WHEN 'signed' THEN 1 WHEN 'committed' THEN 2 WHEN 'diligence' THEN 3 WHEN 'meeting' THEN 4 WHEN 'interested' THEN 5 WHEN 'contacted' THEN 6 ELSE 7 END, updated_at DESC LIMIT 14`,
@@ -187,17 +194,25 @@ export default async function StaffHome({ me }: { me: Viewer }) {
       {standing.length > 0 && (
         <div className="card">
           <h2>Where everyone stands</h2>
-          <ul className="standing">
-            {standing.map((l) => (
-              <li key={l.id}>
-                <Link href={`/pipeline/${l.id}`}>{l.org_name}</Link>
-                <span className="pips" aria-hidden="true">
-                  {STEPS.map((step, i) => <i key={step} className={i <= STEPS.indexOf(l.stage) ? "on" : ""} />)}
-                </span>
-                <span className="muted small">{l.stage}{l.check_size ? ` · ${money(l.check_size, true)}` : ""}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="letter" style={{ marginBottom: 8 }}>
+            {GROUPS.map(([label, stages]) => {
+              const inGroup = standing.filter((l) => stages.includes(l.stage));
+              if (!inGroup.length) return null;
+              return (
+                <p key={label}>
+                  <span className="muted">{label}:</span>{" "}
+                  {inGroup.map((l, i) => (
+                    <span key={l.id}>
+                      {i > 0 ? ", " : ""}
+                      <Link href={`/pipeline/${l.id}`}>{l.org_name}</Link>
+                      {l.check_size ? <span className="muted"> ({money(l.check_size, true)})</span> : null}
+                    </span>
+                  ))}
+                  .
+                </p>
+              );
+            })}
+          </div>
         </div>
       )}
 

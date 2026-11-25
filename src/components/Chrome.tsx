@@ -50,7 +50,14 @@ export function Chrome({ tabs, unread }: { tabs: Tab[]; unread: number }) {
   }, [params, path]);
 
   useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
     const onClick = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest?.("[data-menu-toggle]")) {
+        setOpen((o) => !o);
+        return;
+      }
       const button = (e.target as HTMLElement).closest?.("button.danger, button[data-confirm]") as HTMLButtonElement | null;
       if (!button || button.type === "button") return;
       const question = button.dataset.confirm || `${button.textContent?.trim() ?? "Do this"}? This cannot be undone.`;
@@ -72,9 +79,11 @@ export function Chrome({ tabs, unread }: { tabs: Tab[]; unread: number }) {
         button.removeAttribute("aria-busy");
       }, 8000);
     };
+    document.addEventListener("keydown", onKey);
     document.addEventListener("click", onClick, true);
     document.addEventListener("submit", onSubmit);
     return () => {
+      document.removeEventListener("keydown", onKey);
       document.removeEventListener("click", onClick, true);
       document.removeEventListener("submit", onSubmit);
     };
@@ -99,6 +108,8 @@ export function Chrome({ tabs, unread }: { tabs: Tab[]; unread: number }) {
   }, [path, params]);
 
   return (
+    <>
+    {open && <div className="menu-veil" onClick={() => setOpen(false)} />}
     <nav className="tabbar" aria-label="Main">
       {tabs.map((t) => {
         const active = path === t.href || path.startsWith(t.href + "/");
@@ -115,5 +126,6 @@ export function Chrome({ tabs, unread }: { tabs: Tab[]; unread: number }) {
         {unread > 0 && !open && <i className="dot" />}
       </button>
     </nav>
+    </>
   );
 }

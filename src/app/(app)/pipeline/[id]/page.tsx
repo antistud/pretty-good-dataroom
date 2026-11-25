@@ -76,7 +76,7 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
         title={lead.org_name}
         sub={<>{lead.contact_name || "No contact name"}{lead.contact_email ? ` · ${lead.contact_email}` : ""}{round ? ` · ${round.name}` : " · no round set"}{lead.check_size != null ? ` · ${money(lead.check_size)}` : ""}</>}
       >
-        <Link className="btn" href={lead.round_id ? `/pipeline?round=${lead.round_id}` : "/pipeline"}>Back to pipeline</Link>
+        <Link className="btn" href={lead.round_id ? `/pipeline?round=${lead.round_id}` : "/pipeline"}>All investors</Link>
       </PageHead>
       <Flash sp={await searchParams} />
 

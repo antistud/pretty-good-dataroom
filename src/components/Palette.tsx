@@ -67,7 +67,7 @@ export function Palette({ nav }: { nav: PaletteItem[] }) {
   return (
     <>
       <button type="button" className="palette-open" onClick={() => setOpen(true)}>
-        <span>Search or jump to…</span>
+        <span>Search</span>
         <kbd>⌘K</kbd>
       </button>
       {open && (

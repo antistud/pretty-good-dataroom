@@ -26,7 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ...(me.isStaff
       ? [
           { label: "Founder guide", href: "/guide", kind: "Go to" },
-          { label: "Pipeline", href: "/pipeline", kind: "Go to" },
+          { label: "Investors", href: "/pipeline", kind: "Go to" },
           { label: "Rounds", href: "/rounds", kind: "Go to" },
           { label: "People & access", href: "/people", kind: "Go to" },
           { label: "Activity", href: "/activity", kind: "Go to" },
@@ -50,7 +50,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const tabs: Tab[] = me.isStaff
     ? [
         { label: "Today", href: "/home", icon: "home" },
-        { label: "Pipeline", href: "/pipeline", icon: "people" },
+        { label: "Investors", href: "/pipeline", icon: "people" },
         { label: "Requests", href: "/requests", icon: "chat" },
         { label: "Updates", href: "/updates", icon: "mail" },
       ]
@@ -66,15 +66,23 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Suspense fallback={null}><Cheer /></Suspense>
       <Suspense fallback={null}><Chrome tabs={tabs} unread={unread} /></Suspense>
       <header className="topbar">
-        <Link href="/home">{company}</Link>
-        <Link href="/notifications" aria-label={`What's new${unread ? `, ${unread} unread` : ""}`} style={{ fontFamily: "var(--sans)", fontSize: 14 }}>
-          {unread > 0 ? <span className="count">{unread}</span> : <span className="muted">What&apos;s new</span>}
-        </Link>
+        <Link className="brand" href="/home">{company}</Link>
+        <nav className="topnav" aria-label="Main">
+          {tabs.map((t) => <NavLink key={t.href} href={t.href}>{t.label}</NavLink>)}
+          {me.isStaff && show("documents") && <NavLink href="/documents">Documents</NavLink>}
+        </nav>
+        <div className="topright">
+          <Palette nav={jump} />
+          <Link href="/notifications" className="whatsnew" aria-label={`What's new${unread ? `, ${unread} unread` : ""}`}>
+            What&apos;s new{unread > 0 && <span className="count">{unread}</span>}
+          </Link>
+          <button type="button" className="menu-btn" data-menu-toggle aria-label="Open menu">Menu</button>
+        </div>
       </header>
-      <aside className="side">
+      <aside className="side" aria-label="Menu">
+        <button type="button" className="menu-close linkbtn" data-menu-toggle>Close</button>
         <div className="brand">{company}</div>
         <div className="brand-sub">{me.isStaff ? "Founder workspace" : me.role === "supporter" ? "Supporter updates" : "Investor data room"}</div>
-        <Palette nav={jump} />
         <nav>
           <NavLink href="/home">{me.isStaff ? "Today" : "Home"}</NavLink>
           <NavLink href="/notifications"><span className="bell" style={{ flex: 1 }}>What&apos;s new {unread > 0 && <span className="count">{unread}</span>}</span></NavLink>
@@ -82,7 +90,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <>
               <NavLink href="/guide">Founder guide</NavLink>
               <div className="nav-label">Fundraising</div>
-              <NavLink href="/pipeline">Pipeline</NavLink>
+              <NavLink href="/pipeline">Investors</NavLink>
               <NavLink href="/rounds">Rounds</NavLink>
               <NavLink href="/requests">Requests</NavLink>
               <NavLink href="/intros">Set Me Up</NavLink>
