@@ -56,6 +56,10 @@ ssh root@YOUR_DROPLET_IP grep SETUP_TOKEN /opt/dataroom/.env
 
 Nightly backups are kept for 14 days in `/opt/dataroom/backups`. They live on the same server, so keep DigitalOcean's own backups switched on as well.
 
+## If your DNS is on Cloudflare
+
+Set the record to **DNS only** (grey cloud) for the first start. With the proxy on (orange cloud), Cloudflare shows "SSL handshake failed (525)" because the server cannot yet get its own certificate. Once the site loads over HTTPS you may turn the proxy on, with Cloudflare's SSL/TLS mode set to **Full (strict)**. If you changed the record after installing, run `cd /opt/dataroom && docker compose restart caddy` so it retries straight away.
+
 ## If the page does not load
 
 - **Certificate or connection error:** the DNS record is not pointing at the Droplet yet. Nothing needs re-running; the certificate is issued as soon as it does.
