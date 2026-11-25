@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Welcome } from "@/components/Garden";
+import { Welcome } from "@/components/Path";
 import { FounderNote } from "@/components/FounderNote";
 import type { Viewer } from "@/lib/auth";
 import { canSeeSection } from "@/lib/auth";
@@ -48,7 +48,7 @@ export default async function InvestorHome({ me }: { me: Viewer }) {
 
   return (
     <>
-      <Welcome title={`Welcome, ${me.name.split(" ")[0]}`} stage={Math.round((pctDone / 100) * 4)} />
+      <Welcome title={`Welcome, ${me.name.split(" ")[0]}`} />
       <FounderNote kind="investor" firstName={me.name.split(" ")[0]} />
 
       <div className="card">

@@ -12,7 +12,7 @@ const LINES: Record<string, string> = {
 };
 const COLOURS = ["var(--accent)", "var(--brand)", "#e8b04b", "#d98aa0", "var(--brand)"];
 
-/** A brief shower of petals when something worth celebrating has just happened. */
+/** A brief scatter of paper confetti when something worth celebrating has just happened. */
 export function Cheer() {
   const params = useSearchParams();
   const path = usePathname();
@@ -33,7 +33,7 @@ export function Cheer() {
   if (!show) return null;
   return (
     <div className="cheer" aria-live="polite">
-      <div className="cheer-petals" aria-hidden="true">
+      <div className="cheer-bits" aria-hidden="true">
         {Array.from({ length: 28 }, (_, i) => (
           <span
             key={i}

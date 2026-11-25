@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireStaff } from "@/lib/auth";
 import { SEASONS, currentSeason, noteOfTheDay } from "@/lib/mentor";
-import { Journey, Welcome } from "@/components/Garden";
+import { Journey, Welcome } from "@/components/Path";
 import { Hint } from "@/components/ui";
 
 export default async function Guide() {
@@ -9,7 +9,7 @@ export default async function Guide() {
   const here = currentSeason();
   return (
     <>
-      <Welcome title="Your founder guide" stage={Math.min(4, here)}>
+      <Welcome title="Your founder guide">
         Raising a first round is a path with six stretches. This page shows where you are, what matters now, and what comes next. You only need to think about one stretch at a time.
       </Welcome>
       <div className="card">

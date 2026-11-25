@@ -5,7 +5,7 @@ import { ago, money, monthLabel } from "@/lib/format";
 import { updateDue } from "@/lib/updates";
 import { currentRound, roundTotals } from "@/lib/rounds";
 import { ACTIVE_STAGES, humanDay, recentExternalActivity, suggestions, today, type Lead } from "@/lib/pipeline";
-import { Sprout, Welcome } from "@/components/Garden";
+import { Welcome } from "@/components/Path";
 import { Greeting } from "@/components/Greeting";
 import { roomHealth } from "@/lib/health";
 import { roomIsEmpty, sampleLoaded } from "@/lib/sample";
@@ -80,8 +80,8 @@ export default async function StaffHome({ me }: { me: Viewer }) {
   const toStrengthen = health.items.filter((i) => !i.done).slice(0, 3);
   const isSample = sampleLoaded();
   const canSample = me.role === "founder" && !isSample && roomIsEmpty();
-  const GROWTH: Record<string, number> = { lead: 0, contacted: 0, interested: 1, meeting: 1, diligence: 2, committed: 3, signed: 3, wired: 4 };
-  const plants = q<{ id: number; org_name: string; stage: string; check_size: number | null }>(
+  const STEPS = ["lead", "contacted", "interested", "meeting", "diligence", "committed", "signed", "wired"];
+  const standing = q<{ id: number; org_name: string; stage: string; check_size: number | null }>(
     `SELECT id, org_name, stage, check_size FROM leads WHERE stage != 'passed' ${round ? "AND (round_id = ? OR round_id IS NULL)" : ""}
       ORDER BY CASE stage WHEN 'wired' THEN 0 WHEN 'signed' THEN 1 WHEN 'committed' THEN 2 WHEN 'diligence' THEN 3 WHEN 'meeting' THEN 4 WHEN 'interested' THEN 5 WHEN 'contacted' THEN 6 ELSE 7 END, updated_at DESC LIMIT 14`,
     ...(round ? [round.id] : []),
@@ -89,12 +89,12 @@ export default async function StaffHome({ me }: { me: Viewer }) {
   const topItems = items.slice(0, 5);
   const moreItems = items.slice(5);
 
-  const stretch: Record<string, string> = { prepare: "getting ready to raise", list: "building your investor list", conversations: "in the thick of investor conversations", diligence: "in diligence", closing: "bringing the round in", tending: "between rounds, keeping your investors close" };
+  const stretch: Record<string, string> = { prepare: "getting ready to raise", list: "building your investor list", conversations: "in the thick of investor conversations", diligence: "in diligence", closing: "bringing the round in", after: "between rounds, keeping your investors close" };
   const words = (n: number) => ["No", "One", "Two", "Three", "Four", "Five"][n] ?? String(n);
 
   return (
     <>
-      <Welcome title={<Greeting name={firstName} />} stage={Math.min(4, seasonIndex)} />
+      <Welcome title={<Greeting name={firstName} />} />
 
       {isSample && (
         <div className="notice warn spread">
@@ -177,19 +177,20 @@ export default async function StaffHome({ me }: { me: Viewer }) {
         </div>
       )}
 
-      {plants.length > 0 && (
+      {standing.length > 0 && (
         <div className="card">
-          <h2>Your garden</h2>
-          <p className="muted" style={{ marginTop: -6 }}>Everyone you are talking to. They grow as the conversation does, and bloom when the money lands.</p>
-          <div className="garden">
-            {plants.map((pl) => (
-              <Link key={pl.id} href={`/pipeline/${pl.id}`} title={`${pl.org_name}: ${pl.stage}`}>
-                <Sprout stage={GROWTH[pl.stage] ?? 0} size={GROWTH[pl.stage] === 4 ? 64 : 56} />
-                <span>{pl.org_name}</span>
-                <small>{pl.stage}</small>
-              </Link>
+          <h2>Where everyone stands</h2>
+          <ul className="standing">
+            {standing.map((l) => (
+              <li key={l.id}>
+                <Link href={`/pipeline/${l.id}`}>{l.org_name}</Link>
+                <span className="pips" aria-hidden="true">
+                  {STEPS.map((step, i) => <i key={step} className={i <= STEPS.indexOf(l.stage) ? "on" : ""} />)}
+                </span>
+                <span className="muted small">{l.stage}{l.check_size ? ` · ${money(l.check_size, true)}` : ""}</span>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       )}
 

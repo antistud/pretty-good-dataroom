@@ -32,15 +32,15 @@ export function loadSample(now = new Date()) {
     );
     const day = (offset: number) => new Date(now.getTime() + offset * 86400_000).toISOString().slice(0, 10);
     const leads: [string, string, string, number, string | null, number | null][] = [
-      ["Maple Ventures", "Morgan Lee", "wired", 150000, null, null],
-      ["Juniper Angels", "Sam Ortiz", "signed", 50000, "Send wire instructions", 0],
-      ["Cedar Seed Fund", "Priya Nair", "committed", 100000, "Send the SAFE for signature", -1],
-      ["Willow Capital", "Alex Chen", "diligence", 200000, "Answer their churn question", 1],
-      ["Aspen Partners", "Jordan Blake", "meeting", 100000, "Follow up with customer references", 2],
-      ["Rowan Collective", "Taylor Kim", "interested", 25000, "Book the first call", 3],
-      ["Hazel & Co", "Robin Park", "contacted", 50000, "Nudge once", 4],
-      ["Birchwood Family Office", "Casey Morgan", "lead", 250000, "Ask Morgan for a warm intro", 5],
-      ["Elm Street Angels", "Jamie Fox", "lead", 25000, null, null],
+      ["Northgate Ventures", "Morgan Lee", "wired", 150000, null, null],
+      ["Harbor Angels", "Sam Ortiz", "signed", 50000, "Send wire instructions", 0],
+      ["Summit Seed Fund", "Priya Nair", "committed", 100000, "Send the SAFE for signature", -1],
+      ["Lakeside Capital", "Alex Chen", "diligence", 200000, "Answer their churn question", 1],
+      ["Brightline Partners", "Jordan Blake", "meeting", 100000, "Follow up with customer references", 2],
+      ["Meridian Collective", "Taylor Kim", "interested", 25000, "Book the first call", 3],
+      ["Fairview & Co", "Robin Park", "contacted", 50000, "Nudge once", 4],
+      ["Castle Family Office", "Casey Morgan", "lead", 250000, "Ask Morgan for a warm intro", 5],
+      ["Union Street Angels", "Jamie Fox", "lead", 25000, null, null],
     ];
     for (const [org, contact, stage, cheque, action, due] of leads) {
       const lead = ins(

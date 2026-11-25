@@ -23,7 +23,7 @@ It does two jobs:
 | Set Me Up | A list of introductions you want, shown in the room and in every update email |
 | Guided onboarding | A "Start here" checklist for investors and a lighter welcome for supporters |
 | Founder guide | A six-stage path through the raise, a daily note, a room health score and ready-to-edit wording for each message you need to send |
-| Delight | A garden where each investor grows with the conversation, drag-and-drop pipeline, search and jump (Ctrl/Cmd+K), light and dark themes, a quiet celebration when money lands |
+| Delight | An at-a-glance view of where every investor stands, drag-and-drop pipeline, search and jump (Ctrl/Cmd+K), light and dark themes, a quiet celebration when money lands |
 | Notifications | A "What's new" inbox for everyone, with matching emails each person can switch on or off by topic |
 | Replies | Readers can answer an update with one tap or a written reply; founders see who read it. Emails set Reply-To to a founder so replies reach a person |
 | Automations | Automatic next steps, welcomes, wire thank-yous, alerts when investors lean in, nudges, runway warnings and a Monday summary. Each can be switched off |

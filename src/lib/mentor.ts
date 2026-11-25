@@ -22,7 +22,7 @@ export const SEASONS: Season[] = [
   {
     key: "prepare",
     label: "Prepare",
-    title: "Prepare the ground",
+    title: "Get the room ready",
     summary: "Before you talk to anyone, get the room tidy. Investors forgive an early product; they do not forgive a messy cap table or a missing incorporation document.",
     focus: [
       "Write the overview: the problem, what you built, why now, what you have proved so far, and what you are raising.",
@@ -45,7 +45,7 @@ export const SEASONS: Season[] = [
   {
     key: "list",
     label: "Build your list",
-    title: "Plant widely",
+    title: "Build a long list",
     summary: "A raise is a numbers game run with care. Most founders need far more conversations than they expect, so build the list before you start the clock.",
     focus: [
       "List every investor who could plausibly write this cheque: angels, pre-seed funds, operators in your market.",
@@ -65,7 +65,7 @@ export const SEASONS: Season[] = [
   {
     key: "conversations",
     label: "Conversations",
-    title: "Water regularly",
+    title: "Keep every conversation moving",
     summary: "You are in meetings now. Your job is to keep every conversation moving and to make it easy for an interested investor to say yes.",
     focus: [
       "After every meeting, write a note and set a next action with a date. Then do it on that date.",
@@ -85,7 +85,7 @@ export const SEASONS: Season[] = [
   {
     key: "diligence",
     label: "Diligence",
-    title: "Tend what is growing",
+    title: "Get through diligence",
     summary: "Someone is looking closely. Diligence at pre-seed is mostly about trust: are you organised, honest and quick to respond?",
     focus: [
       "Answer requests within a day, even if the answer is that you will have it by Friday.",
@@ -105,7 +105,7 @@ export const SEASONS: Season[] = [
   {
     key: "closing",
     label: "Closing",
-    title: "Bring in the harvest",
+    title: "Close the round",
     summary: "You have commitments. A commitment is not money, so move each one to a signature and a wire without letting it drift.",
     focus: [
       "Send the SAFE the day someone commits, with wire instructions.",
@@ -124,9 +124,9 @@ export const SEASONS: Season[] = [
     ],
   },
   {
-    key: "tending",
-    label: "Keep the garden",
-    title: "Keep the garden",
+    key: "after",
+    label: "After the close",
+    title: "Keep your investors close",
     summary: "The round is closed. The founders who raise the next one easily are the ones who kept their investors informed through this one.",
     focus: [
       "Send the update every month, on time, including the bad months. Especially the bad months.",
