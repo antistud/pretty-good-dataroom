@@ -1,3 +1,4 @@
+import { ExportBar } from "@/components/Export";
 import { requireSection } from "@/lib/auth";
 import { q } from "@/lib/db";
 import { logView } from "@/lib/activity";
@@ -26,7 +27,7 @@ export default async function Team({ searchParams }: { searchParams: Promise<Rec
 
   return (
     <>
-      <PageHead title="Team" sub="The people building the company." />
+      <PageHead title="Team" sub="The people building the company."><ExportBar /></PageHead>
       <Flash sp={await searchParams} />
       {me.isStaff ? (
         <Hint title="Why this page matters">At pre-seed, investors are mostly betting on the team. List the founders first, then key hires and advisors. Say what each person has done that makes them credible here.</Hint>

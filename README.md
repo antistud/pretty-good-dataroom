@@ -28,6 +28,7 @@ It does two jobs:
 | Replies | Readers can answer an update with one tap or a written reply; founders see who read it. Emails set Reply-To to a founder so replies reach a person |
 | Automations | Automatic next steps, welcomes, wire thank-yous, alerts when investors lean in, nudges, runway warnings and a Monday summary. Each can be switched off |
 | Phone | A bottom tab bar, stacked tables, large touch targets, and it can be added to the home screen |
+| Export and print | Every investor-facing page prints cleanly or saves as PDF, stamped with who it was prepared for. A one-page summary of everything a person can see. Cap table, SAFEs and financials as CSV, and all documents as one zip, for tiers allowed to download |
 | Sample company | One click loads a fictional raise into an empty room so you can look around; one click removes exactly what it added |
 | Security | Invite-only, scrypt password hashes, optional two-step sign-in, optional NDA gate, activity and audit log |
 
@@ -72,6 +73,7 @@ Stack: Next.js (App Router, server actions), TypeScript, better-sqlite3, pdf-lib
 
 - This tool tracks and guides. It is not legal, tax or securities advice, and its SAFE maths is a planning aid, not a closing calculation. Have a lawyer confirm conversions and filings.
 - It does not read incoming email. Replies to its emails go to a founder's own inbox; replies inside the room are threaded.
+- PDFs are made by the browser's own "Save as PDF". The per-page footer and page numbers appear in Chrome and Edge; other browsers show the stamp once at the top.
 - It does not do e-signatures. Sign elsewhere and upload the signed copy.
 - Watermarks and view-only mode deter casual sharing; they cannot stop someone photographing a screen.
 - It is built for one company per install.

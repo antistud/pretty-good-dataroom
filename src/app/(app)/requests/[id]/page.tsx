@@ -1,3 +1,4 @@
+import { ExportBar } from "@/components/Export";
 import Link from "next/link";
 import { humanDay } from "@/lib/pipeline";
 import { redirect } from "next/navigation";
@@ -41,6 +42,7 @@ export default async function RequestThread({ params, searchParams }: { params: 
   return (
     <>
       <PageHead title={req.title} sub={<>{KIND_LABEL[req.kind]} from {req.asker ?? "someone"}{me.isStaff && req.org_name ? ` at ${req.org_name}` : ""} · {fmtDateTime(req.created_at)}{req.needed_by ? <strong> · needed {humanDay(req.needed_by)}</strong> : null}</>}>
+          <ExportBar />
         <span className={`badge ${STATUS_BADGE[req.status]}`}>{STATUS_LABEL[req.status]}</span>
         <Link className="btn small" href="/requests">All requests</Link>
       </PageHead>

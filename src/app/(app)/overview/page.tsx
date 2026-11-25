@@ -1,3 +1,4 @@
+import { ExportBar } from "@/components/Export";
 import Link from "next/link";
 import { canSeeSection, requireSection, type Section } from "@/lib/auth";
 import { getSetting } from "@/lib/db";
@@ -49,7 +50,7 @@ export default async function Overview({ searchParams }: { searchParams: Promise
 
   return (
     <>
-      <PageHead title={company} sub={tagline || (me.isStaff ? "Add a one-line description below." : undefined)} />
+      <PageHead title={company} sub={tagline || (me.isStaff ? "Add a one-line description below." : undefined)}><ExportBar /></PageHead>
       <Flash sp={await searchParams} />
       {!me.isStaff && (
         <Hint title="What this page is">A short summary of the company in the founders' own words. Read this first, then use the links at the bottom to go deeper.</Hint>

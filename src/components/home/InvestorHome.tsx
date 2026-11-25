@@ -102,6 +102,7 @@ export default async function InvestorHome({ me }: { me: Viewer }) {
             <li key={h.href}><Link href={h.href}>{h.label}</Link> <span className="muted">· {h.note}</span></li>
           ))}
         </ul>
+        <p style={{ marginTop: 14 }}><Link className="btn small" href="/pack">Everything on one page, to print or save as PDF</Link></p>
         {see("requests") && <p className="muted" style={{ marginTop: 10 }}>If something you would expect to see is not here, ask above and we will add it.</p>}
       </div>
 

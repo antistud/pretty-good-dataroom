@@ -1,3 +1,4 @@
+import { ExportBar } from "@/components/Export";
 import Link from "next/link";
 import { canSeeSection, requireSection } from "@/lib/auth";
 import { q } from "@/lib/db";
@@ -60,7 +61,7 @@ export default async function Financials({ searchParams }: { searchParams: Promi
 
   return (
     <>
-      <PageHead title="Financials" sub="Cash, burn and runway, month by month." />
+      <PageHead title="Financials" sub="Cash, burn and runway, month by month."><ExportBar links={me.canDownload ? [{ href: "/api/export/financials.csv", label: "Download CSV" }] : []} /></PageHead>
       <Flash sp={await searchParams} />
       {me.isStaff ? (
         <Hint title="What to do here">Once a month, add one row: what came in, what went out, and the bank balance on the last day. That is all a pre-seed investor needs. These numbers also pre-fill your monthly investor update. Upload the detailed model to the Financials folder in Documents.</Hint>

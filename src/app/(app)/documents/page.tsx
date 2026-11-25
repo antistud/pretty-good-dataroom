@@ -1,3 +1,4 @@
+import { ExportBar } from "@/components/Export";
 import Link from "next/link";
 import { requireSection } from "@/lib/auth";
 import { visibleDocuments, visibleFolders, type FolderRow } from "@/lib/docs";
@@ -42,7 +43,7 @@ export default async function Documents({ searchParams }: { searchParams: Promis
 
   return (
     <>
-      <PageHead title="Documents" sub={me.isStaff ? "Everything investors can open, organised by folder." : "The company's documents, organised by folder."} />
+      <PageHead title="Documents" sub={me.isStaff ? "Everything investors can open, organised by folder." : "The company's documents, organised by folder."}><ExportBar print={false} links={me.canDownload ? [{ href: "/api/export/documents.zip", label: "Download everything (zip)" }] : []} /></PageHead>
       <Flash sp={sp} />
       {me.isStaff ? (
         <Hint title="How this works">

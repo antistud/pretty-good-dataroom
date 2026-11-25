@@ -1,3 +1,4 @@
+import { ExportBar } from "@/components/Export";
 import Link from "next/link";
 import { q, q1 } from "@/lib/db";
 import { reactUpdateAction, replyUpdateAction } from "../respond-actions";
@@ -93,6 +94,7 @@ export default async function UpdatePage({ params, searchParams }: { params: Pro
     return (
       <>
         <PageHead title={update.title} sub={`Covers ${monthLabel(update.period)} · published ${fmtDate(update.published_at)}`}>
+          <ExportBar />
           <Link className="btn" href="/updates">All updates</Link>
         </PageHead>
         <Flash sp={sp} />
@@ -147,6 +149,7 @@ export default async function UpdatePage({ params, searchParams }: { params: Pro
   return (
     <>
       <PageHead title={update.title} sub={<>Covers {monthLabel(update.period)} · {published ? <span className="badge ok">Published {fmtDate(update.published_at)}</span> : <span className="badge warn">Draft</span>}</>}>
+          <ExportBar />
         <Link className="btn" href="/updates">All updates</Link>
         {!published && !confirm && <Link className="btn primary" href={`/updates/${id}?confirm=1`}>Publish and send…</Link>}
       </PageHead>

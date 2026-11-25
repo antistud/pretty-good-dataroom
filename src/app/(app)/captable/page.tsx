@@ -1,3 +1,4 @@
+import { ExportBar } from "@/components/Export";
 import Link from "next/link";
 import { requireSection } from "@/lib/auth";
 import { q } from "@/lib/db";
@@ -112,7 +113,7 @@ export default async function CapTable({ searchParams }: { searchParams: Promise
 
   return (
     <>
-      <PageHead title="Cap table & SAFEs" sub="Who owns the company today, what has been sold on SAFEs, and what it looks like after a priced round." />
+      <PageHead title="Cap table & SAFEs" sub="Who owns the company today, what has been sold on SAFEs, and what it looks like after a priced round."><ExportBar links={me.canDownload ? [{ href: "/api/export/cap-table.csv", label: "Cap table (CSV)" }, { href: "/api/export/safes.csv", label: "SAFEs (CSV)" }] : []} /></PageHead>
       <Flash sp={sp} />
       {me.isStaff ? (
         <Hint title="Keep this page true">

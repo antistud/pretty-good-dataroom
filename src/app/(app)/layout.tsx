@@ -12,6 +12,11 @@ import { monthLabel, tierName } from "@/lib/format";
 import { updateDue } from "@/lib/updates";
 import { logoutAction } from "../(auth)/actions";
 
+/** Makes text safe inside a CSS string: nothing can close the quote or the style block. */
+function cssString(text: string): string {
+  return text.replace(/[^\w .,@()·:\-]/g, (c) => `\\${c.codePointAt(0)!.toString(16)} `);
+}
+
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const me = await requireUser();
   const company = getSetting("company_name");
@@ -82,11 +87,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const jump: PaletteItem[] = [
     ...groups.flatMap((g) => g.items.map((i) => ({ label: g.items.length > 1 && i.label !== g.label ? `${g.label}: ${i.label}` : g.label, href: i.href, kind: "Go to" }))),
     ...on(canAsk, { label: "Ask the founders", href: "/requests", kind: "Go to" }),
+    { label: "Printable summary", href: "/pack", kind: "Go to" },
     { label: "What's new", href: "/notifications", kind: "Go to" },
     ...on(me.role === "founder", { label: "Settings", href: "/settings", kind: "Go to" }),
     { label: "Account", href: "/account", kind: "Go to" },
   ];
 
+  const stamp = `${company} · Confidential · Prepared for ${me.name} (${me.email}) on ${new Date().toISOString().slice(0, 10)}`;
   const unread = unreadCount(me.id);
   const ICON: Record<string, Tab["icon"]> = { today: "home", home: "home", investors: "people", room: "doc", documents: "doc", company: "doc", numbers: "doc", updates: "mail", intros: "people" };
   const tabs: Tab[] = groups.slice(0, 4).map((g) => ({ label: g.label.replace(/^The /, "").replace(/^./, (c) => c.toUpperCase()), href: g.items[0].href, icon: ICON[g.key] ?? "doc", match: g.items.map((i) => i.href) }));
@@ -151,6 +158,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <Link className="btn small" href="/updates">{due.draftId ? "Finish the draft" : "Write it now"}</Link>
           </div>
         )}
+        {/* Printed pages say who they were made for: once at the top, and in the footer of every page where the browser supports it. */}
+        <style>{`@media print { @page { @bottom-center { content: "${cssString(stamp)}"; font: 8pt sans-serif; color: #777; } @bottom-right { content: counter(page) " / " counter(pages); font: 8pt sans-serif; color: #777; } } }`}</style>
+        <div className="print-head">{stamp}</div>
         <main className="main">{children}</main>
       </div>
     </div>

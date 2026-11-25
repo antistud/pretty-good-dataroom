@@ -1,3 +1,4 @@
+import { ExportBar } from "@/components/Export";
 import Link from "next/link";
 import { canSeeSection, requireSection } from "@/lib/auth";
 import { q } from "@/lib/db";
@@ -17,7 +18,7 @@ export default async function TheRound() {
 
   return (
     <>
-      <PageHead title="The round" sub="What is being raised, on what terms, and how to take part." />
+      <PageHead title="The round" sub="What is being raised, on what terms, and how to take part."><ExportBar /></PageHead>
       {me.isStaff && <Hint>This is what investors see. Edit rounds under <Link href="/rounds">Rounds</Link>. Only rounds that are open or closing appear here.</Hint>}
       {rounds.length === 0 && (
         <div className="empty">
