@@ -343,7 +343,9 @@ CREATE TABLE IF NOT EXISTS mcp_tokens (
   label TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   last_used_at TEXT,
-  revoked INTEGER NOT NULL DEFAULT 0
+  revoked INTEGER NOT NULL DEFAULT 0,
+  expires_at TEXT NOT NULL DEFAULT (datetime('now', '+30 days')),
+  can_read INTEGER NOT NULL DEFAULT 0
 );
 
 -- Suggested changes waiting for a founder to review. Nothing here is live until it is applied.
@@ -391,6 +393,16 @@ function open(): Database.Database {
   d.exec(SCHEMA);
   // Columns added after the first release. Each is added once, to databases created before it existed.
   const hasColumn = (table: string, column: string) => (d.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).some((c) => c.name === column);
+  if (!hasColumn("mcp_tokens", "expires_at")) {
+    try {
+      // Connectors made before keys expired get thirty days from the upgrade, and keep the read access they had.
+      d.exec("ALTER TABLE mcp_tokens ADD COLUMN expires_at TEXT NOT NULL DEFAULT '2000-01-01 00:00:00'");
+      d.exec("ALTER TABLE mcp_tokens ADD COLUMN can_read INTEGER NOT NULL DEFAULT 0");
+      d.exec("UPDATE mcp_tokens SET expires_at = datetime('now', '+30 days'), can_read = 1");
+    } catch {
+      /* another process added them first */
+    }
+  }
   if (!hasColumn("requests", "needed_by")) {
     try {
       d.exec("ALTER TABLE requests ADD COLUMN needed_by TEXT");

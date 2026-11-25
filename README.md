@@ -78,7 +78,7 @@ Stack: Next.js (App Router, server actions), TypeScript, better-sqlite3, pdf-lib
 - It does not read incoming email. Replies to its emails go to a founder's own inbox; replies inside the room are threaded.
 - PDFs are made by the browser's own "Save as PDF". The per-page footer and page numbers appear in Chrome and Edge; other browsers show the stamp once at the top.
 - Anyone who controls an invited email inbox can sign in as that person. The optional authenticator-app step protects against that.
-- The built-in connector lets an assistant read the room's profile, team, cap table, rounds and SAFEs and send suggestions. It cannot publish, invite, or see investors, and its suggestions do nothing until a founder applies them. I have tested it with the official MCP client library, not inside each assistant's own app.
+- The built-in connector lets an assistant send suggestions, and read the room's profile, team, cap table, rounds and SAFEs only if you tick that box. Its key expires (7 days by default). It cannot publish, invite, or see investors, and its suggestions do nothing until a founder applies them. I have tested it with the official MCP client library, not inside each assistant's own app.
 - It does not do e-signatures. Sign elsewhere and upload the signed copy.
 - Watermarks and view-only mode deter casual sharing; they cannot stop someone photographing a screen.
 - It is built for one company per install.

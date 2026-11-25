@@ -3,6 +3,7 @@ import { getSetting, q, q1, run } from "./db";
 import { hashToken } from "./auth";
 import { logActivity } from "./activity";
 import { parseAnswer } from "./docfill";
+import { notify } from "./notify";
 
 /**
  * A small MCP server, so a founder can connect the AI assistant they already
@@ -22,28 +23,46 @@ export const SUPPORTED = [MODERN, ...LEGACY];
 const META_VERSION = "io.modelcontextprotocol/protocolVersion";
 const SERVER = { name: "pretty-good-dataroom", title: "Data room", version: "1.0.0" };
 
-export type McpUser = { id: number; name: string; tokenId: number };
+export type McpUser = { id: number; name: string; tokenId: number; label: string; canRead: boolean; firstUse: boolean };
 
-/** Who a connector link belongs to, or null. Only founders and team may connect an assistant. */
+/** How long a new connector lasts, in days. Short by default: setup is a one-off job. */
+export const CONNECTOR_DAYS = [1, 7, 30, 90];
+
+/** Who a connector key belongs to, or null. Only founders and team may connect an assistant. */
 export function userForToken(token: string): McpUser | null {
   if (!/^[A-Za-z0-9_-]{40,60}$/.test(token)) return null;
-  const row = q1<{ id: number; name: string; token_id: number }>(
-    `SELECT u.id, u.name, t.id AS token_id FROM mcp_tokens t JOIN users u ON u.id = t.user_id
-      WHERE t.token_hash = ? AND t.revoked = 0 AND u.disabled = 0 AND u.role IN ('founder','team')`,
+  const row = q1<{ id: number; name: string; token_id: number; label: string; can_read: number; last_used_at: string | null }>(
+    `SELECT u.id, u.name, t.id AS token_id, t.label, t.can_read, t.last_used_at FROM mcp_tokens t JOIN users u ON u.id = t.user_id
+      WHERE t.token_hash = ? AND t.revoked = 0 AND t.expires_at > datetime('now') AND u.disabled = 0 AND u.role IN ('founder','team')`,
     hashToken(token),
   );
   if (!row) return null;
   run("UPDATE mcp_tokens SET last_used_at = datetime('now') WHERE id = ?", row.token_id);
-  return { id: row.id, name: row.name, tokenId: row.token_id };
+  return { id: row.id, name: row.name, tokenId: row.token_id, label: row.label, canRead: !!row.can_read, firstUse: !row.last_used_at };
+}
+
+/** The first time a connector is used, its owner is told, so a key used by someone else does not go unnoticed. */
+export function noteFirstUse(user: McpUser, ip: string) {
+  logActivity({ id: user.id, orgId: null }, "connector.first_use", undefined, undefined, `${user.label} from ${ip}`);
+  void notify([user.id], {
+    category: "reminders",
+    title: `Your ${user.label} connector was just used for the first time`,
+    body: "If that was you connecting your assistant, all is well. If you were not expecting it, turn the connector off now.",
+    href: "/fill",
+    cta: "See your connectors",
+    mail: { transactional: true },
+  }).catch(() => {});
 }
 
 export function newConnectorToken(): string {
   return crypto.randomBytes(36).toString("base64url");
 }
 
-const instructions = () =>
+const instructions = (canRead: boolean) =>
   `This is the investor data room for ${getSetting("company_name")}. Use it to help the founder fill the room from documents they share with you (pitch deck, formation documents, stock agreements, signed SAFEs). ` +
-  `Call get_room first to see what is already there. Then call propose_changes with only what the documents actually say: never guess or fill gaps, use plain numbers for amounts and share counts, and list anything missing, unsigned or contradictory under "unsure". ` +
+  (canRead ? "Call get_room first to see what is already there. Then call" : "Call") +
+  ` propose_changes with only what the documents actually say: never guess or fill gaps, use plain numbers for amounts and share counts, and list anything missing, unsigned or contradictory under "unsure". ` +
+  (canRead ? "" : "This connection can send suggestions but cannot read the room; the data room itself flags anything that is already there, so send everything the documents support. ") +
   `Your proposal is a suggestion. The founder reviews and applies it inside the data room; tell them to open "From your documents" there when you are done.`;
 
 const nullable = (type: string, description: string) => ({ type: [type, "null"], description });
@@ -149,6 +168,7 @@ function roomSnapshot() {
 function callTool(user: McpUser, name: string, args: unknown): { content: { type: "text"; text: string }[]; isError?: boolean; structuredContent?: unknown } | null {
   const text = (t: string, isError = false) => ({ content: [{ type: "text" as const, text: t }], ...(isError ? { isError: true } : {}) });
   if (name === "get_room") {
+    if (!user.canRead) return text("This connection can only send suggestions; the founder has not allowed it to read the room. Send what the documents say with propose_changes. The data room flags anything already there.", true);
     const snapshot = roomSnapshot();
     return { content: [{ type: "text", text: JSON.stringify(snapshot, null, 2) }], structuredContent: snapshot };
   }
@@ -189,7 +209,7 @@ export function handleMessage(user: McpUser, msg: Rpc, headers: Record<string, s
   if (msg.method === "initialize") {
     const asked = typeof msg.params?.protocolVersion === "string" ? (msg.params.protocolVersion as string) : "";
     const version = LEGACY.includes(asked) ? asked : LEGACY[0];
-    return { status: 200, body: { jsonrpc: "2.0", id: msg.id, result: { protocolVersion: version, capabilities: { tools: {} }, serverInfo: SERVER, instructions: instructions() } } };
+    return { status: 200, body: { jsonrpc: "2.0", id: msg.id, result: { protocolVersion: version, capabilities: { tools: {} }, serverInfo: SERVER, instructions: instructions(user.canRead) } } };
   }
 
   const version = headerVersion ?? metaVersion ?? "2025-03-26";
@@ -210,11 +230,11 @@ export function handleMessage(user: McpUser, msg: Rpc, headers: Record<string, s
 
   switch (msg.method) {
     case "server/discover":
-      return ok({ supportedVersions: SUPPORTED, capabilities: { tools: {} }, instructions: instructions(), _meta: { "io.modelcontextprotocol/serverInfo": SERVER } });
+      return ok({ supportedVersions: SUPPORTED, capabilities: { tools: {} }, instructions: instructions(user.canRead), _meta: { "io.modelcontextprotocol/serverInfo": SERVER } });
     case "ping":
       return ok({});
     case "tools/list":
-      return ok({ tools: TOOLS });
+      return ok({ tools: user.canRead ? TOOLS : TOOLS.filter((t) => t.name !== "get_room") });
     case "tools/call": {
       const name = typeof msg.params?.name === "string" ? msg.params.name : "";
       const result = callTool(user, name, msg.params?.arguments);

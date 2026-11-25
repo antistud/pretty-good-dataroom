@@ -8,7 +8,7 @@ import { flash } from "@/lib/flash";
 import { formStr } from "@/lib/format";
 import { parseAnswer } from "@/lib/docfill";
 import { applyAnswer } from "@/lib/docfill-apply";
-import { newConnectorToken } from "@/lib/mcp";
+import { CONNECTOR_DAYS, newConnectorToken } from "@/lib/mcp";
 
 export async function createConnectorAction(form: FormData) {
   const me = await requireStaff();
@@ -16,12 +16,14 @@ export async function createConnectorAction(form: FormData) {
   if (active >= 5) flash("/fill", "You already have five connector links. Turn one off before making another.", "error");
   const token = newConnectorToken();
   const label = formStr(form.get("label"), 60) || "My AI assistant";
-  run("INSERT INTO mcp_tokens (user_id, token_hash, label) VALUES (?,?,?)", me.id, hashToken(token), label);
-  logActivity(me, "connector.create", undefined, undefined, label);
-  // The address is the credential. It is shown once, handed to the next page in a short-lived
+  const days = CONNECTOR_DAYS.includes(Number(form.get("days"))) ? Number(form.get("days")) : 7;
+  const canRead = form.get("can_read") === "on" ? 1 : 0;
+  run("INSERT INTO mcp_tokens (user_id, token_hash, label, expires_at, can_read) VALUES (?,?,?, datetime('now', ?), ?)", me.id, hashToken(token), label, `+${days} days`, canRead);
+  logActivity(me, "connector.create", undefined, undefined, `${label}: ${canRead ? "can read and suggest" : "suggestions only"}, ${days} days`);
+  // The key is shown once, handed to the next page in a short-lived
   // cookie so it never appears in a URL, the browser history or a log.
-  (await cookies()).set("pgd_new_connector", `${appUrl()}/mcp/${token}`, { httpOnly: true, sameSite: "strict", secure: appUrl().startsWith("https://"), path: "/fill", maxAge: 300 });
-  flash("/fill", "Your connector address is ready below. Copy it now; it is shown only once.");
+  (await cookies()).set("pgd_new_connector", token, { httpOnly: true, sameSite: "strict", secure: appUrl().startsWith("https://"), path: "/fill", maxAge: 300 });
+  flash("/fill", "Your connector is ready below. Copy it now; the key is shown only once.");
 }
 
 export async function revokeConnectorAction(form: FormData) {

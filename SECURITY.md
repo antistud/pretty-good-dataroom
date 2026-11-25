@@ -54,20 +54,36 @@ NDA or legal advice.
 
 ## AI assistant connectors
 
-A founder or team member can create a connector address (an MCP endpoint at
-`/mcp/<secret>`) and give it to an AI assistant of their choice.
+A founder or team member can create a connector (an MCP endpoint) and give it
+to an AI assistant of their choice.
 
-- **The address is the credential.** It is a long random value shown once and
-  stored only as a hash. Anyone holding it can use the connector, so treat it
-  like a password and turn it off on the "From your documents" page if it may
-  have leaked. Each person can have up to five.
-- **What it can read:** the company profile, team, cap table, rounds and SAFEs.
-  It cannot read documents, investors, the pipeline, people, requests,
-  updates or activity.
+- **The key is the credential.** It is a long random value (288 bits) shown
+  once and stored only as a hash. Each person can have up to five.
+- **Two ways to present it.** Preferred: `POST /mcp` with
+  `Authorization: Bearer <key>`, so nothing secret is in an address or a log.
+  For assistants that only accept a plain URL: `POST /mcp/<key>`. In that
+  form the key can end up wherever URLs are recorded (the assistant
+  provider's settings, a proxy's access log), which is why the limits below
+  exist.
+- **Suggestions only, by default.** A new connector cannot read anything; it
+  can only send suggestions. A leaked key then reveals nothing. Reading the
+  company profile, team, cap table, rounds and SAFEs is a box the founder
+  ticks per connector. No connector can read documents, investors, the
+  pipeline, people, requests, updates or activity.
+- **Keys expire.** The founder picks 1, 7 (default), 30 or 90 days. A key can
+  be turned off at any time on the "From your documents" page, and stops
+  working when its owner loses access.
+- **First use is announced.** The owner gets a notification and an email the
+  first time a key is used, and the caller's address is written to the
+  activity log.
 - **What it can write:** suggestions only. A suggestion is stored as pending
   and changes nothing until a founder reviews and applies it, item by item.
   This is deliberate: documents handed to an assistant can contain text that
   tries to steer it, and an assistant can simply be wrong.
+- Wrong keys are limited to 20 per caller per 15 minutes.
+- Not done: OAuth sign-in for connectors (the assistant sends the founder to
+  the room to approve it, and no key is ever copied). It is the stronger
+  design and a larger piece of work.
 - Everything an assistant sends is treated as untrusted input: parsed
   leniently, then typed, range-checked and length-limited before it is stored
   or shown. Requests from other websites (an `Origin` header that is not the

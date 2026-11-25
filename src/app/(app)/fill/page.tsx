@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { requireStaff } from "@/lib/auth";
+import { appUrl, requireStaff } from "@/lib/auth";
+import { CONNECTOR_DAYS } from "@/lib/mcp";
 import { getSetting, q } from "@/lib/db";
 import { ago, money, num } from "@/lib/format";
 import { documentsPrompt, parseAnswer } from "@/lib/docfill";
@@ -19,8 +20,12 @@ const Tick = ({ name, checked = true, children }: { name: string; checked?: bool
 export default async function Fill({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
   const me = await requireStaff();
   const company = getSetting("company_name");
-  const fresh = (await cookies()).get("pgd_new_connector")?.value;
-  const connectors = q<{ id: number; label: string; created_at: string; last_used_at: string | null }>("SELECT id, label, created_at, last_used_at FROM mcp_tokens WHERE user_id = ? AND revoked = 0 ORDER BY id DESC", me.id);
+  const key = (await cookies()).get("pgd_new_connector")?.value;
+  const fresh = key && /^[A-Za-z0-9_-]{40,60}$/.test(key) ? { key, address: `${appUrl()}/mcp/${key}`, plain: `${appUrl()}/mcp` } : null;
+  const connectors = q<{ id: number; label: string; last_used_at: string | null; can_read: number; days_left: number }>(
+    "SELECT id, label, last_used_at, can_read, CAST(julianday(expires_at) - julianday('now') + 0.5 AS INTEGER) AS days_left FROM mcp_tokens WHERE user_id = ? AND revoked = 0 AND expires_at > datetime('now') ORDER BY id DESC",
+    me.id,
+  );
   const proposals = q<{ id: number; source: string; payload: string; created_at: string }>("SELECT id, source, payload, created_at FROM proposals WHERE status = 'pending' ORDER BY id DESC LIMIT 10");
   const prompt = documentsPrompt(company);
 
@@ -109,27 +114,47 @@ export default async function Fill({ searchParams }: { searchParams: Promise<Rec
 
       <div className="card">
         <h2>1. Connect your assistant</h2>
-        <p style={{ maxWidth: "64ch" }}>Give Claude, ChatGPT, Grok or any assistant that supports connectors (MCP) a private address for this room. It can then see what is filled in and send suggestions straight here. It cannot publish anything, invite anyone or see your investors.</p>
+        <p style={{ maxWidth: "64ch" }}>Give Claude, ChatGPT, Grok or any assistant that supports connectors (MCP) a private key to this room. It can then send suggestions straight here. It cannot publish anything, invite anyone or see your investors, and unless you tick the box below it cannot read anything either.</p>
         {fresh && (
           <div className="notice" style={{ background: "var(--warn-soft)", color: "var(--ink)" }}>
             <strong>Your connector address. Copy it now; it will not be shown again.</strong>
-            <div className="template" style={{ margin: "8px 0", wordBreak: "break-all", background: "var(--surface)" }}>{fresh}</div>
+            <div className="template" style={{ margin: "8px 0", wordBreak: "break-all", background: "var(--surface)" }}>{fresh.address}</div>
             <div className="row">
-              <CopyButton text={fresh} label="Copy address" />
+              <CopyButton text={fresh.address} label="Copy address" />
               <form action={hideConnectorAction}><button className="btn small">I have copied it</button></form>
             </div>
-            <p className="small" style={{ margin: "8px 0 0" }}>Treat it like a password: anyone with this address can read what is in the room and send suggestions.</p>
+            <details style={{ marginTop: 10 }}>
+              <summary>Safer, if your assistant lets you add a key, token or header</summary>
+              <p className="small" style={{ margin: "8px 0 4px" }}>Use this address, which contains no secret:</p>
+              <div className="template" style={{ margin: "0 0 6px", wordBreak: "break-all", background: "var(--surface)" }}>{fresh.plain}</div>
+              <CopyButton text={fresh.plain} label="Copy address" />
+              <p className="small" style={{ margin: "10px 0 4px" }}>and give it this as the API key or bearer token (sent as <code>Authorization: Bearer …</code>):</p>
+              <div className="template" style={{ margin: "0 0 6px", wordBreak: "break-all", background: "var(--surface)" }}>{fresh.key}</div>
+              <CopyButton text={fresh.key} label="Copy key" />
+            </details>
+            <p className="small" style={{ margin: "10px 0 0" }}>Treat it like a password. You will get a note the first time it is used; if that surprises you, turn it off.</p>
           </div>
         )}
-        <form action={createConnectorAction} className="inline-form" style={{ maxWidth: 520 }}>
-          <Field label="Which assistant is it for?"><input name="label" maxLength={60} placeholder="e.g. Claude" /></Field>
-          <button className="btn primary">Create a connector address</button>
+        <form action={createConnectorAction} style={{ maxWidth: 520 }}>
+          <div className="inline-form">
+            <Field label="Which assistant is it for?"><input name="label" maxLength={60} placeholder="e.g. Claude" /></Field>
+            <Field label="Works for">
+              <select name="days" defaultValue="7">
+                {CONNECTOR_DAYS.map((d) => <option key={d} value={d}>{d === 1 ? "1 day" : `${d} days`}</option>)}
+              </select>
+            </Field>
+          </div>
+          <label className="row" style={{ alignItems: "flex-start", flexWrap: "nowrap", margin: "10px 0" }}>
+            <input type="checkbox" name="can_read" style={{ marginTop: 4 }} />
+            <span>Also let it see what is already in the room <span className="muted">(company profile, team, cap table, rounds and SAFEs). Leave this off unless you need it: with it off, a leaked key reveals nothing.</span></span>
+          </label>
+          <button className="btn primary">Create a connector</button>
         </form>
         {connectors.length > 0 && (
-          <ul className="quiet-list" style={{ marginTop: 14, maxWidth: 520 }}>
+          <ul className="quiet-list" style={{ marginTop: 14, maxWidth: 560 }}>
             {connectors.map((c) => (
               <li key={c.id} className="spread">
-                <span>{c.label} <span className="muted small">· {c.last_used_at ? `last used ${ago(c.last_used_at)}` : "not used yet"}</span></span>
+                <span>{c.label} <span className="muted small">· {c.can_read ? "can read and suggest" : "suggestions only"} · {c.last_used_at ? `last used ${ago(c.last_used_at)}` : "not used yet"} · {c.days_left < 1 ? "expires today" : `expires in ${c.days_left} day${c.days_left === 1 ? "" : "s"}`}</span></span>
                 <form action={revokeConnectorAction}><input type="hidden" name="id" value={c.id} /><button className="linkbtn small danger">Turn off</button></form>
               </li>
             ))}
@@ -137,7 +162,7 @@ export default async function Fill({ searchParams }: { searchParams: Promise<Rec
         )}
         <details style={{ marginTop: 14 }}>
           <summary>Where do I put the address?</summary>
-          <p className="muted" style={{ maxWidth: "64ch" }}>In your assistant&apos;s settings, look for <strong>Connectors</strong>, <strong>Apps</strong> or <strong>MCP servers</strong>, choose to add a custom one, and paste the address. If it asks about authentication, choose &ldquo;none&rdquo;: the address itself is the key. Menus differ between assistants and change often, so search your assistant&apos;s help for &ldquo;custom connector&rdquo; or &ldquo;remote MCP server&rdquo; if you cannot find it. Some assistants only offer this on paid plans.</p>
+          <p className="muted" style={{ maxWidth: "64ch" }}>In your assistant&apos;s settings, look for <strong>Connectors</strong>, <strong>Apps</strong> or <strong>MCP servers</strong>, choose to add a custom one, and paste the address. If it asks about authentication, choose &ldquo;none&rdquo; when you pasted the long address (the address itself is the key), or &ldquo;API key&rdquo; / &ldquo;bearer token&rdquo; when you used the short address and the separate key. Menus differ between assistants and change often, so search your assistant&apos;s help for &ldquo;custom connector&rdquo; or &ldquo;remote MCP server&rdquo; if you cannot find it. Some assistants only offer this on paid plans.</p>
         </details>
       </div>
 
