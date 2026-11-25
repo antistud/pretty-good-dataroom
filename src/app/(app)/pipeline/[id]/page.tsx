@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { CopyButton } from "@/components/CopyButton";
+import { templatesFor } from "@/lib/templates";
 import { notFound } from "next/navigation";
 import { requireStaff } from "@/lib/auth";
 import { q, q1 } from "@/lib/db";
@@ -23,7 +25,7 @@ function Move({ leadId, stage, label, primary = true }: { leadId: number; stage:
 }
 
 export default async function LeadPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string>> }) {
-  await requireStaff();
+  const me = await requireStaff();
   const { id } = await params;
   const lead = q1<Lead>("SELECT * FROM leads WHERE id = ?", Number(id));
   if (!lead) notFound();
@@ -57,6 +59,7 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
   const t = today();
   const stageIndex = STAGES.findIndex((s) => s.key === lead.stage);
   const inviteLabel = mailEnabled() ? "invite to the room" : "get their invite link";
+  const templates = templatesFor(lead, me.name);
   const hasAccess = !!org && (members.length > 0 || invites.length > 0);
 
   const inviteForm = (label: string, primary = true) => (
@@ -178,6 +181,25 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
           </>
         )}
       </div>
+
+      {templates.length > 0 && (
+        <details className="card">
+          <summary>Words you can use: {templates.map((t) => t.title.toLowerCase()).join(", ")}</summary>
+          <p className="muted small">A starting point, written for this stage. Replace anything in [brackets], make it sound like you, then send it from your own email.</p>
+          {templates.map((t) => (
+            <div key={t.key} style={{ marginBottom: 16 }}>
+              <div className="spread" style={{ marginBottom: 6 }}>
+                <div><strong>{t.title}</strong> <span className="muted small">· {t.when}</span></div>
+                <div className="row">
+                  <CopyButton text={`Subject: ${t.subject}\n\n${t.body}`} label="Copy" />
+                  {lead.contact_email && <a className="btn small" href={`mailto:${encodeURIComponent(lead.contact_email)}?subject=${encodeURIComponent(t.subject)}&body=${encodeURIComponent(t.body)}`}>Open in email</a>}
+                </div>
+              </div>
+              <div className="template"><strong>{t.subject}</strong>{"\n\n"}{t.body}</div>
+            </div>
+          ))}
+        </details>
+      )}
 
       <div className="grid2">
         <div className="card">

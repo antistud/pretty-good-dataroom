@@ -7,12 +7,20 @@ import { visibleDocuments } from "@/lib/docs";
 import { ago, fmtDate, monthLabel, parseDate } from "@/lib/format";
 import { onboardingSteps, visibleUpdates } from "@/lib/onboarding";
 import { Hint } from "@/components/ui";
+import { RaiseProgress } from "@/components/rounds";
+import { roundTotals } from "@/lib/rounds";
 import { markStepAction } from "@/app/(app)/home/actions";
 
 const STATUS_LABEL: Record<string, string> = { open: "Open", in_progress: "In progress" };
 
 export default async function InvestorHome({ me }: { me: Viewer }) {
   const company = getSetting("company_name");
+  const momentum = canSeeSection(me, "round")
+    ? q<{ id: number; name: string; status: string; target_amount: number }>(
+        "SELECT id, name, status, target_amount FROM rounds WHERE status IN ('open','closing') AND min_level <= ? ORDER BY id DESC LIMIT 1",
+        me.level,
+      )[0]
+    : undefined;
   const steps = onboardingSteps(me);
   const required = steps.filter((s) => !s.optional);
   const doneCount = steps.filter((s) => s.done).length;
@@ -85,6 +93,16 @@ export default async function InvestorHome({ me }: { me: Viewer }) {
           ))}
         </ol>
       </div>
+
+      {momentum && (
+        <div className="card">
+          <div className="spread">
+            <h2 style={{ margin: 0 }}>{momentum.name} <span className="badge">{momentum.status === "closing" ? "closing soon" : "open now"}</span></h2>
+            <Link className="btn small" href="/round">See the terms</Link>
+          </div>
+          <div style={{ marginTop: 12 }}><RaiseProgress totals={roundTotals(momentum.id)} target={momentum.target_amount} /></div>
+        </div>
+      )}
 
       <div className="grid2">
         <div className="card">

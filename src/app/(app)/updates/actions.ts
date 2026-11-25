@@ -120,7 +120,7 @@ export async function publishUpdateAction(form: FormData) {
   run("UPDATE updates SET status = 'published', published_at = datetime('now') WHERE id = ?", id);
   logActivity(me, "update.publish", "update", id, update.period);
   const res = await sendUpdateEmails(id);
-  flash(`/updates/${id}`, `Published. ${sendMessage(res)}`);
+  flash(`/updates/${id}`, `Published. ${sendMessage(res)}`, "ok", "published");
 }
 
 export async function resendUpdateAction(form: FormData) {

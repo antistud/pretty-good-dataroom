@@ -47,7 +47,7 @@ export function Journey({ stops, current }: { stops: JourneyStop[]; current: num
 }
 
 /** A warm page opener: greeting, one sentence, and the sprout. */
-export function Welcome({ title, children, stage }: { title: string; children?: React.ReactNode; stage: number }) {
+export function Welcome({ title, children, stage }: { title: React.ReactNode; children?: React.ReactNode; stage: number }) {
   return (
     <div className="welcome" style={{ marginBottom: 22 }}>
       <Sprout stage={stage} />

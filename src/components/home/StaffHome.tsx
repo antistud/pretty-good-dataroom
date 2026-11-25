@@ -6,7 +6,11 @@ import { updateDue } from "@/lib/updates";
 import { currentRound, roundTotals } from "@/lib/rounds";
 import { ACTIVE_STAGES, recentExternalActivity, suggestions, today, type Lead } from "@/lib/pipeline";
 import { Hint } from "@/components/ui";
-import { Journey, Welcome } from "@/components/Garden";
+import { Journey, Sprout, Welcome } from "@/components/Garden";
+import { Greeting } from "@/components/Greeting";
+import { roomHealth } from "@/lib/health";
+import { roomIsEmpty, sampleLoaded } from "@/lib/sample";
+import { clearSampleAction, loadSampleAction } from "@/app/(app)/home/actions";
 import { SEASONS, currentSeason, noteOfTheDay } from "@/lib/mentor";
 
 type Item = { text: string; href: string; cta: string; urgent?: boolean };
@@ -73,16 +77,37 @@ export default async function StaffHome({ me }: { me: Viewer }) {
   const firstName = me.name.split(" ")[0];
   const seasonIndex = currentSeason();
   const season = SEASONS[seasonIndex];
-  const hour = new Date().getUTCHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Hello" : "Good evening";
+  const health = roomHealth();
+  const toStrengthen = health.items.filter((i) => !i.done).slice(0, 3);
+  const isSample = sampleLoaded();
+  const canSample = me.role === "founder" && !isSample && roomIsEmpty();
+  const GROWTH: Record<string, number> = { lead: 0, contacted: 0, interested: 1, meeting: 1, diligence: 2, committed: 3, signed: 3, wired: 4 };
+  const plants = q<{ id: number; org_name: string; stage: string; check_size: number | null }>(
+    `SELECT id, org_name, stage, check_size FROM leads WHERE stage != 'passed' ${round ? "AND (round_id = ? OR round_id IS NULL)" : ""}
+      ORDER BY CASE stage WHEN 'wired' THEN 0 WHEN 'signed' THEN 1 WHEN 'committed' THEN 2 WHEN 'diligence' THEN 3 WHEN 'meeting' THEN 4 WHEN 'interested' THEN 5 WHEN 'contacted' THEN 6 ELSE 7 END, updated_at DESC LIMIT 14`,
+    ...(round ? [round.id] : []),
+  );
   const topItems = items.slice(0, 5);
   const moreItems = items.slice(5);
 
   return (
     <>
-      <Welcome title={`${greeting}, ${firstName}`} stage={Math.min(4, seasonIndex)}>
+      <Welcome title={<Greeting name={firstName} />} stage={Math.min(4, seasonIndex)}>
         {items.length === 0 ? "Nothing urgent is waiting on you today." : items.length === 1 ? "One thing needs you today." : `${items.length} things need you today. Start at the top; one at a time is plenty.`}
       </Welcome>
+
+      {isSample && (
+        <div className="notice warn spread">
+          <span>You are looking at a sample company. None of this is real, and investors cannot see it until you invite them.</span>
+          {me.role === "founder" && <form action={clearSampleAction}><button className="btn small">Clear the sample and start for real</button></form>}
+        </div>
+      )}
+      {canSample && (
+        <Hint title="Want to look around first?">
+          Load a made-up company to see what a raise in full swing looks like: a pipeline, a cap table, six months of financials. One click removes it again.
+          <form action={loadSampleAction} style={{ marginTop: 8 }}><button className="btn small">Show me a sample company</button></form>
+        </Hint>
+      )}
 
       <div className="card">
         <div className="spread">
@@ -167,6 +192,43 @@ export default async function StaffHome({ me }: { me: Viewer }) {
           </>
         )}
       </div>
+
+      {plants.length > 0 && (
+        <div className="card">
+          <div className="spread">
+            <h2 style={{ margin: 0 }}>Your garden</h2>
+            <span className="muted small">Each investor grows as the conversation does. Blooms are money in the bank.</span>
+          </div>
+          <div className="garden">
+            {plants.map((pl) => (
+              <Link key={pl.id} href={`/pipeline/${pl.id}`} title={`${pl.org_name}: ${pl.stage}`}>
+                <Sprout stage={GROWTH[pl.stage] ?? 0} size={GROWTH[pl.stage] === 4 ? 64 : 56} />
+                <span>{pl.org_name}</span>
+                <small>{pl.stage}</small>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {setupLeft === 0 && <div className="card">
+        <div className="row" style={{ gap: 20, alignItems: "center", flexWrap: "nowrap" }}>
+          <div className="ring" style={{ ["--p" as string]: health.score } as React.CSSProperties}><b>{health.score}</b></div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h2 style={{ marginBottom: 4 }}>Room health {health.streak > 1 && <span className="badge ok">{health.streak} updates in a row</span>}</h2>
+            {toStrengthen.length === 0 ? (
+              <p className="muted" style={{ margin: 0 }}>Everything an investor expects is in place. Keep it current.</p>
+            ) : (
+              <>
+                <p className="muted small" style={{ marginBottom: 6 }}>How ready the room is for an investor to walk in. The quickest ways to raise it:</p>
+                <div className="row">
+                  {toStrengthen.map((i) => <Link key={i.title} className="btn small" href={i.href} title={i.help}>{i.title}</Link>)}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>}
 
       <Hint title="A thought for today">{noteOfTheDay()}</Hint>
 

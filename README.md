@@ -22,6 +22,9 @@ It does two jobs:
 | Requests | Investors ask questions or request documents, data or a call; founders work an inbox |
 | Set Me Up | A list of introductions you want, shown in the room and in every update email |
 | Guided onboarding | A "Start here" checklist for investors and a lighter welcome for supporters |
+| Founder guide | A six-stage path through the raise, a daily note, a room health score and ready-to-edit wording for each message you need to send |
+| Delight | A garden where each investor grows with the conversation, drag-and-drop pipeline, search and jump (Ctrl/Cmd+K), light and dark themes, a quiet celebration when money lands |
+| Sample company | One click loads a fictional raise into an empty room so you can look around; one click removes exactly what it added |
 | Security | Invite-only, scrypt password hashes, optional two-step sign-in, optional NDA gate, activity and audit log |
 
 ## Run it

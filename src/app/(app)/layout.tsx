@@ -1,5 +1,9 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { NavLink } from "@/components/NavLink";
+import { Palette, type PaletteItem } from "@/components/Palette";
+import { Cheer } from "@/components/Cheer";
+import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { canSee, canSeeSection, requireUser } from "@/lib/auth";
 import { getSetting, q } from "@/lib/db";
 import { monthLabel, tierName } from "@/lib/format";
@@ -15,11 +19,37 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const due = me.isStaff ? updateDue() : null;
   const show = (s: Parameters<typeof canSeeSection>[1]) => canSeeSection(me, s);
 
+  const jump: PaletteItem[] = [
+    { label: me.isStaff ? "Today" : "Start here", href: "/home", kind: "Go to" },
+    ...(me.isStaff
+      ? [
+          { label: "Founder guide", href: "/guide", kind: "Go to" },
+          { label: "Pipeline", href: "/pipeline", kind: "Go to" },
+          { label: "Rounds", href: "/rounds", kind: "Go to" },
+          { label: "People & access", href: "/people", kind: "Go to" },
+          { label: "Activity", href: "/activity", kind: "Go to" },
+        ]
+      : []),
+    ...(show("overview") ? [{ label: "Overview", href: "/overview", kind: "Go to" }] : []),
+    ...(!me.isStaff && show("round") ? [{ label: "The round", href: "/round", kind: "Go to" }] : []),
+    ...(show("team") ? [{ label: "Team", href: "/team", kind: "Go to" }] : []),
+    ...(show("documents") ? [{ label: "Documents", href: "/documents", kind: "Go to" }] : []),
+    ...(show("captable") ? [{ label: "Cap table & SAFEs", href: "/captable", kind: "Go to" }] : []),
+    ...(show("financials") ? [{ label: "Financials", href: "/financials", kind: "Go to" }] : []),
+    ...(show("updates") ? [{ label: me.isStaff ? "Investor updates" : "Updates", href: "/updates", kind: "Go to" }] : []),
+    ...(show("requests") ? [{ label: me.isStaff ? "Requests" : "Ask or request", href: "/requests", kind: "Go to" }] : []),
+    ...(show("intros") ? [{ label: "Set Me Up", href: "/intros", kind: "Go to" }] : []),
+    ...(me.role === "founder" ? [{ label: "Settings", href: "/settings", kind: "Go to" }] : []),
+    { label: "Account", href: "/account", kind: "Go to" },
+  ];
+
   return (
     <div className="shell">
+      <Suspense fallback={null}><Cheer /></Suspense>
       <aside className="side">
         <div className="brand">{company}</div>
         <div className="brand-sub">{me.isStaff ? "Founder workspace" : me.role === "supporter" ? "Supporter updates" : "Investor data room"}</div>
+        <Palette nav={jump} />
         <nav>
           <NavLink href="/home">{me.isStaff ? "Today" : "Start here"}</NavLink>
           {me.isStaff && (
@@ -66,6 +96,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <Link href="/account">Account</Link>
             <form action={logoutAction}><button className="linkbtn">Sign out</button></form>
           </div>
+          <ThemeSwitch />
         </div>
       </aside>
       <div>

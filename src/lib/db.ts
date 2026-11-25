@@ -301,18 +301,21 @@ declare global {
 
 function open(): Database.Database {
   fs.mkdirSync(path.join(DATA_DIR, "files"), { recursive: true });
-  const d = new Database(path.join(DATA_DIR, "dataroom.sqlite"));
+  const d = new Database(path.join(DATA_DIR, "dataroom.sqlite"), { timeout: 10_000 });
+  // Several processes can open a brand-new database at once (the build does), so wait for locks instead of failing.
+  d.pragma("busy_timeout = 10000");
   d.pragma("journal_mode = WAL");
   d.pragma("foreign_keys = ON");
   d.exec(SCHEMA);
-  if (!d.prepare("SELECT 1 FROM tiers").get()) {
+  d.transaction(() => {
+    if (d.prepare("SELECT 1 FROM tiers").get()) return;
     const t = d.prepare("INSERT INTO tiers (level, name, can_download) VALUES (?,?,?)");
     t.run(1, "Teaser", 0);
     t.run(2, "Diligence", 0);
     t.run(3, "Closing", 1);
     const f = d.prepare("INSERT INTO folders (name, description, min_level, position) VALUES (?,?,?,?)");
     DEFAULT_FOLDERS.forEach(([n, desc, lvl], i) => f.run(n, desc, lvl, i));
-  }
+  }).immediate();
   return d;
 }
 

@@ -5,6 +5,7 @@ import { money, tierName } from "@/lib/format";
 import { currentRound } from "@/lib/rounds";
 import { STAGES, today, type Lead } from "@/lib/pipeline";
 import { Field, Flash, Hint, PageHead } from "@/components/ui";
+import { Board } from "@/components/Board";
 import { addLeadAction } from "./actions";
 
 type Round = { id: number; name: string; status: string };
@@ -59,33 +60,21 @@ export default async function Pipeline({ searchParams }: { searchParams: Promise
         <div className="card"><div className="stat">{money(wired, true)}</div><div className="stat-label">Wired: money in the bank</div></div>
       </div>
 
-      <div className="board">
-        {columns.map((s) => {
-          const inCol = leads.filter((l) => l.stage === s.key);
-          return (
-            <div className="col" key={s.key}>
-              <h3><span>{s.label}</span><span>{inCol.length}</span></h3>
-              {inCol.length === 0 && <div className="muted small" style={{ marginTop: 8 }}>—</div>}
-              {inCol.map((l) => (
-                <Link className="lead" key={l.id} href={`/pipeline/${l.id}`}>
-                  <strong>{l.org_name}</strong>
-                  {l.contact_name && <div className="muted small">{l.contact_name}</div>}
-                  <div className="row small" style={{ marginTop: 4, gap: 6 }}>
-                    {l.check_size != null && <span>{money(l.check_size, true)}</span>}
-                    {l.org_id != null && <span className={`badge ${l.org_kind === "supporter" ? "grey" : ""}`}>{l.org_kind === "supporter" ? "Supporter" : tierName(l.org_tier ?? 1)}</span>}
-                  </div>
-                  {(l.next_action || l.next_action_due) && (
-                    <div className="small" style={{ marginTop: 6 }}>
-                      {l.next_action_due && <span className={`badge ${l.next_action_due <= t ? "warn" : "grey"}`}>{l.next_action_due < t ? "Overdue" : l.next_action_due === t ? "Today" : l.next_action_due}</span>}{" "}
-                      {l.next_action}
-                    </div>
-                  )}
-                </Link>
-              ))}
-            </div>
-          );
-        })}
-      </div>
+      <Board
+        columns={columns.map((c) => ({ key: c.key, label: c.label }))}
+        leads={leads.filter((l) => l.stage !== "passed").map((l) => ({
+          id: l.id,
+          stage: l.stage,
+          name: l.org_name,
+          contact: l.contact_name,
+          cheque: l.check_size != null ? money(l.check_size, true) : null,
+          badge: l.org_id != null ? (l.org_kind === "supporter" ? "Supporter" : tierName(l.org_tier ?? 1)) : null,
+          badgeGrey: l.org_kind === "supporter",
+          due: l.next_action_due ? { label: l.next_action_due < t ? "Overdue" : l.next_action_due === t ? "Today" : l.next_action_due, warn: l.next_action_due <= t } : null,
+          action: l.next_action,
+        }))}
+      />
+      <p className="muted small" style={{ marginTop: -4 }}>Drag a card to move it, or open it for the guided next step.</p>
 
       {passed.length > 0 && (
         <details className="card">

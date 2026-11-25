@@ -6,7 +6,7 @@ import { createInvite } from "@/lib/invites";
 import { logActivity } from "@/lib/activity";
 import { flash } from "@/lib/flash";
 import { formNum, formStr, money } from "@/lib/format";
-import { isStage, stageOf, tierLevelForRank, type Lead, type StageKey } from "@/lib/pipeline";
+import { STAGES, isStage, stageOf, tierLevelForRank, type Lead, type StageKey } from "@/lib/pipeline";
 
 function getLead(id: number): Lead {
   const lead = q1<Lead>("SELECT * FROM leads WHERE id = ?", id);
@@ -134,7 +134,7 @@ export async function moveStageAction(form: FormData) {
   setStage(me, lead, stage as StageKey);
   const s = stageOf(stage);
   const access = lead.org_id && s.tierRank > 0 ? " Their data room access was raised to match." : "";
-  flash(back, `Moved to ${s.label}.${access}`);
+  flash(back, `Moved to ${s.label}.${access}`, "ok", stage === "wired" ? "wired" : undefined);
 }
 
 /** Creates the firm (if needed) at teaser access, invites the contact and moves the lead to Interested. */
@@ -214,7 +214,7 @@ export async function commitAction(form: FormData) {
     extra = round ? " A SAFE at the round's terms was added to the cap table as committed." : " A SAFE was added to the cap table as committed. This lead has no round, so set its cap and discount there.";
   }
   setStage(me, lead, "committed");
-  flash(back, `${money(amount)} commitment recorded.${extra}`);
+  flash(back, `${money(amount)} commitment recorded.${extra}`, "ok", "committed");
 }
 
 export async function passAction(form: FormData) {
@@ -262,4 +262,23 @@ export async function deleteLeadAction(form: FormData) {
   run("DELETE FROM leads WHERE id = ?", lead.id);
   logActivity(me, "lead.delete", "lead", lead.id, lead.org_name);
   flash("/pipeline", `${lead.org_name} removed from the pipeline. Any data room access they had is unchanged.`);
+}
+
+/** Called when a card is dragged to another column on the board. */
+export async function dragStageAction(leadId: number, stage: string) {
+  const me = await requireStaff();
+  const lead = getLead(Number(leadId));
+  const card = `/pipeline/${lead.id}`;
+  if (!isStage(stage) || stage === lead.stage) flash("/pipeline", "Nothing to move.", "error");
+  if (stage === "passed") flash(card, "Record why they passed here, then decide what happens to their access.", "error");
+  const order = STAGES.map((s) => s.key);
+  const committedAt = order.indexOf("committed");
+  // A commitment needs an amount, so it is recorded on the card rather than by dragging.
+  if (order.indexOf(stage as StageKey) >= committedAt && order.indexOf(lead.stage as StageKey) < committedAt) {
+    flash(card, "Lovely. Record the amount they committed here first; that also adds the SAFE to the cap table.");
+  }
+  if (lead.stage === "passed") run("UPDATE leads SET passed_reason = NULL WHERE id = ?", lead.id);
+  setStage(me, lead, stage as StageKey);
+  const s = stageOf(stage);
+  flash("/pipeline", `${lead.org_name} moved to ${s.label}.${lead.org_id && s.tierRank > 0 ? " Their access was raised to match." : ""}`, "ok", stage === "wired" ? "wired" : undefined);
 }

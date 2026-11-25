@@ -74,7 +74,7 @@ export async function setRoundStatusAction(form: FormData) {
     closing: "Closing started. Work through the closing checklist as money arrives.",
     closed: "Round closed. Finish anything left on the closing checklist.",
   }[status];
-  flash(`/rounds/${id}`, msg);
+  flash(`/rounds/${id}`, msg, "ok", status === "closed" ? "closed" : undefined);
 }
 
 export async function deleteRoundAction(form: FormData) {
