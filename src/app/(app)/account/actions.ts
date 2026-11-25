@@ -1,7 +1,7 @@
 "use server";
 
 import { q1, run } from "@/lib/db";
-import { hashPassword, passwordProblem, requireUser, verifyPassword } from "@/lib/auth";
+import { hashPassword, passwordProblem, requireUser, signOutOtherSessions, verifyPassword } from "@/lib/auth";
 import { newTotpSecret, verifyTotp } from "@/lib/totp";
 import { createInvite } from "@/lib/invites";
 import { logActivity } from "@/lib/activity";
@@ -17,8 +17,10 @@ export async function changePasswordAction(form: FormData) {
   const problem = passwordProblem(next);
   if (problem) flash("/account", problem, "error");
   run("UPDATE users SET password_hash = ? WHERE id = ?", hashPassword(next), me.id);
+  // Anyone else signed in as this person (a lost laptop, a shared computer) is signed out.
+  await signOutOtherSessions(me.id);
   logActivity(me, "account.password");
-  flash("/account", "Password changed.");
+  flash("/account", "Password changed. Any other device signed in as you has been signed out.");
 }
 
 export async function startTotpAction() {
@@ -33,6 +35,7 @@ export async function confirmTotpAction(form: FormData) {
   const row = q1<{ totp_secret: string | null }>("SELECT totp_secret FROM users WHERE id = ?", me.id);
   if (!row?.totp_secret || !verifyTotp(row.totp_secret, String(form.get("code") ?? ""))) flash("/account", "That code is not correct. Try the newest one.", "error");
   run("UPDATE users SET totp_enabled = 1 WHERE id = ?", me.id);
+  await signOutOtherSessions(me.id);
   logActivity(me, "account.2fa_on");
   flash("/account", "Two-step sign-in is on.");
 }

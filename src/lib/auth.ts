@@ -193,7 +193,26 @@ export function rateLimited(key: string, max = 8, windowMs = 15 * 60_000): boole
   return h.n > max;
 }
 
+/**
+ * The caller's address, for rate limiting. Behind the bundled proxy the last
+ * entry of X-Forwarded-For is the one the proxy itself added; anything before
+ * it was supplied by the caller and cannot be trusted.
+ */
 export async function clientIp(): Promise<string> {
   const h = await headers();
-  return (h.get("x-forwarded-for") || "").split(",")[0].trim() || h.get("x-real-ip") || "local";
+  const chain = (h.get("x-forwarded-for") || "").split(",").map((p) => p.trim()).filter(Boolean);
+  return chain[chain.length - 1] || h.get("x-real-ip") || "local";
+}
+
+/** Compares two secrets without leaking, through timing, how much of a guess was right. */
+export function sameSecret(a: string, b: string): boolean {
+  const x = crypto.createHash("sha256").update(a).digest();
+  const y = crypto.createHash("sha256").update(b).digest();
+  return crypto.timingSafeEqual(x, y);
+}
+
+/** Ends every session of this user except the one making the request. */
+export async function signOutOtherSessions(userId: number) {
+  const token = (await cookies()).get(COOKIE)?.value;
+  run("DELETE FROM sessions WHERE user_id = ? AND token_hash != ?", userId, token ? hashToken(token) : "");
 }

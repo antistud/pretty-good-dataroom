@@ -1,6 +1,6 @@
 # Pretty Good Data Room
 
-A self-hosted data room and fundraising workspace for pre-seed startups. One Docker container, one SQLite file, no external services required.
+A self-hosted data room and fundraising workspace for pre-seed startups. One command to install, one SQLite file, no external services required.
 
 It does two jobs:
 
@@ -34,25 +34,25 @@ It does two jobs:
 
 ## Run it
 
-You need Docker and a domain name pointing at your server.
+On a fresh Linux server whose DNS name points at it, one command:
 
 ```bash
-git clone <this repo> && cd pretty-good-dataroom
-cp .env.example .env        # then edit it
-docker compose up -d --build
+curl -fsSL https://raw.githubusercontent.com/antistud/pretty-good-dataroom/main/install.sh | sudo bash -s -- room.example.com
 ```
 
-Then open the site and create the first founder account on the setup screen.
+It installs Docker if needed, starts the app behind HTTPS, schedules a nightly backup, and prints your address and a setup token. Open the address, enter the token, and create the first founder account.
 
-Set these in `.env` before the first start:
+Run `sudo /opt/dataroom/install.sh` again at any time to update; settings and data are kept. Step-by-step for DigitalOcean: [docs/digitalocean.md](docs/digitalocean.md).
+
+Settings live in `/opt/dataroom/.env`:
 
 | Variable | Purpose |
 |---|---|
-| `APP_URL` | The public address, e.g. `https://room.example.com`. Used in links and to decide whether cookies are HTTPS-only |
-| `SETUP_TOKEN` | A long random string. The setup screen asks for it, so a stranger cannot claim a fresh install |
+| `DOMAIN` | The address of the room, e.g. `room.example.com` |
+| `SETUP_TOKEN` | Asked for once on the setup screen, so a stranger cannot claim a fresh install |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Optional. Any SMTP provider. Without these the app still works, but invitations are copy-and-paste links and reminders only appear in the app |
 
-The container listens on port 3000 and should sit behind a reverse proxy that provides HTTPS. `Caddyfile.example` is a working starting point.
+Prefer to do it by hand? Copy `.env.example` to `.env`, fill it in, and run `docker compose up -d`. That starts two containers: the app, and Caddy for HTTPS.
 
 ## Your data
 
