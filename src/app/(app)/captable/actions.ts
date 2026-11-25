@@ -5,6 +5,7 @@ import { requireStaff } from "@/lib/auth";
 import { logActivity } from "@/lib/activity";
 import { flash } from "@/lib/flash";
 import { formNum, formStr } from "@/lib/format";
+import { standing } from "@/lib/captable";
 
 const HOLDER_KINDS = ["founder", "employee", "advisor", "investor", "pool"];
 const SAFE_STATUSES = ["committed", "signed", "wired"];
@@ -20,14 +21,31 @@ export async function saveHolderAction(form: FormData) {
   if (shares == null || shares < 0) flash("/captable", "Enter the number of shares.", "error");
   const cls = formStr(form.get("share_class"), 60) || "Common";
   const notes = formStr(form.get("notes"), 500) || null;
+  // Dates and vesting. The pool is not a person, so it has none.
+  const date = (key: string) => {
+    const v = String(form.get(key) ?? "").trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v)) ? v : null;
+  };
+  const person = kind !== "pool";
+  const start = person ? date("start_date") : null;
+  const end = person ? date("end_date") : null;
+  const vest = person ? formNum(form.get("vest_months")) : null;
+  const cliff = person ? formNum(form.get("cliff_months")) : null;
+  if (start && end && end < start) flash("/captable", "The leaving date is before the start date.", "error");
+  if (vest != null && (vest < 0 || vest > 240 || !Number.isInteger(vest))) flash("/captable", "Enter the vesting period as a whole number of months, for example 48.", "error");
+  if (cliff != null && (cliff < 0 || !Number.isInteger(cliff) || (vest != null && cliff > vest))) flash("/captable", "The cliff must be a whole number of months, no longer than the vesting period.", "error");
+  if (vest && !start) flash("/captable", "Add the start date, so vesting can be worked out.", "error");
+  const dates = [start, end, vest || null, vest ? cliff || 0 : null];
   if (id) {
-    run("UPDATE holders SET name = ?, kind = ?, share_class = ?, shares = ?, notes = ? WHERE id = ?", name, kind, cls, shares, notes, id);
+    run("UPDATE holders SET name = ?, kind = ?, share_class = ?, shares = ?, notes = ?, start_date = ?, end_date = ?, vest_months = ?, cliff_months = ? WHERE id = ?", name, kind, cls, shares, notes, ...dates, id);
     logActivity(me, "holder.update", "holder", id, name);
   } else {
     const pos = q1<{ p: number }>("SELECT IFNULL(MAX(position), 0) + 1 AS p FROM holders")!.p;
-    const res = run("INSERT INTO holders (name, kind, share_class, shares, notes, position) VALUES (?,?,?,?,?,?)", name, kind, cls, shares, notes, pos);
+    const res = run("INSERT INTO holders (name, kind, share_class, shares, notes, position, start_date, end_date, vest_months, cliff_months) VALUES (?,?,?,?,?,?,?,?,?,?)", name, kind, cls, shares, notes, pos, ...dates);
     logActivity(me, "holder.create", "holder", Number(res.lastInsertRowid), name);
   }
+  const st = standing({ shares: shares!, start, end, vestMonths: vest, cliffMonths: cliff }, new Date().toISOString().slice(0, 10));
+  if (st.left && st.forfeited > 0) flash("/captable", `${name} saved. They keep ${Math.round(st.held).toLocaleString("en-US")} vested shares; the other ${Math.round(st.forfeited).toLocaleString("en-US")} no longer count.`);
   flash("/captable", `${name} saved.`);
 }
 

@@ -12,7 +12,8 @@ export type MissingInput = {
   docs: string[];
   /** Folder names that already contain at least one document. */
   filledFolders: string[];
-  holders: { name: string; kind: string; shares: number }[];
+  /** `shares` is what counts today; `forfeited` is what someone who left gave up. */
+  holders: { name: string; kind: string; shares: number; left?: boolean; forfeited?: number }[];
   team: { name: string }[];
   safes: { id: number; investor: string; amount: number; status: string; signed_on: string | null; hasDocument: boolean }[];
   rounds: { name: string; status: string; instrument: string }[];
@@ -39,6 +40,7 @@ const KIND = {
   advisor: /advisor|advisory|\bfast\b/,
   plan: /equity incentive|incentive plan|stock plan|option plan|share plan|\besop\b|\bemi\b/,
   safe: /\bsafe\b|simple agreement for future equity/,
+  leaving: /repurchase|separation|termination|departure|resignation|release agreement/,
   deck: /\bdeck\b|pitch|presentation|one pager/,
 } as const;
 const SUFFIXES = new Set(["inc", "llc", "ltd", "lp", "llp", "the", "and", "fund", "capital", "ventures", "partners", "holdings", "group", "trust", "family", "office"]);
@@ -65,7 +67,7 @@ export function findMissing(input: MissingInput): MissingDoc[] {
   const perPerson = (kind: keyof typeof KIND, key: string, what: string, people: string[], why: (names: string[]) => string, folder: string) => {
     const missing = uncovered(kind, people);
     if (missing.length === 0) return;
-    if (missing.length > 3) add(key, `${what}s for ${missing.length} people`, `${why(missing)} Still to add: ${list(missing)}.`, folder);
+    if (missing.length > 3) add(key, `${what.replace(/agreement$/, "agreements")} for ${missing.length} people`, `${why(missing)} Still to add: ${list(missing)}.`, folder);
     else for (const p of missing) add(`${key}:${norm(p)}`, `${what} for ${p}`, why([p]), folder);
   };
 
@@ -92,6 +94,10 @@ export function findMissing(input: MissingInput): MissingDoc[] {
   const builders = [...new Map([...founders, ...employees, ...input.team.map((t) => t.name)].map((n) => [norm(n), n])).values()].filter((n) => !advisors.some((a) => norm(a) === norm(n)));
   perPerson("ip", "ip", "IP assignment agreement", builders, (n) => `${list(n)} ${n.length === 1 ? "is" : "are"} on the team or the cap table. Investors check that everything ${n.length === 1 ? first(n[0]) : "they"} built belongs to the company.`, "IP");
   perPerson("advisor", "advisor", "Advisor agreement", advisors, (n) => `${list(n)} ${n.length === 1 ? "is" : "are"} on the cap table as ${n.length === 1 ? "an advisor" : "advisors"}.`, "Team");
+
+  // People who left before they were fully vested.
+  const leavers = input.holders.filter((h) => h.left && (h.forfeited ?? 0) > 0).map((h) => h.name);
+  perPerson("leaving", "leaving", "Separation or repurchase paperwork", leavers, (n) => `${list(n)} left before fully vesting. Investors ask for the signed paperwork showing the unvested shares went back to the company.`, "Cap table");
 
   // The option pool.
   if (pool && ofKind("plan").length === 0) add("plan", "Equity incentive plan", `The cap table reserves an option pool of ${Math.round(pool.shares).toLocaleString("en-US")} shares. The plan, and the board approval that created it, belong in the room.`, "Company");

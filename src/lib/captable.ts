@@ -183,3 +183,67 @@ function safePrice(s: ResolvedSafe, roundPrice: number, postSafeCap: number, pre
   }
   return { price, method };
 }
+
+// ---------- Dates and vesting ----------
+
+export type VestingInput = {
+  /** Shares granted or bought at the start. */
+  shares: number;
+  /** When they started (vesting begins). ISO date. */
+  start?: string | null;
+  /** When they left, if they have. ISO date. */
+  end?: string | null;
+  /** Length of the vesting schedule in months. Empty or 0 means the shares were never subject to vesting. */
+  vestMonths?: number | null;
+  /** Months before anything vests. */
+  cliffMonths?: number | null;
+};
+export type Standing = {
+  /** What counts on the cap table: everything granted while the person is here, only what had vested once they have left. */
+  held: number;
+  granted: number;
+  /** Vested as of today, or as of the day they left. */
+  vested: number;
+  /** Unvested shares given up on leaving. Zero for anyone still here. */
+  forfeited: number;
+  left: boolean;
+  /** True when a vesting schedule applies. */
+  vests: boolean;
+  /** ISO date the schedule completes, when one applies. */
+  fullyVestedOn: string | null;
+};
+
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
+/** Whole months from one ISO date to another; a month completes on the same day of the month. */
+export function monthsBetween(from: string, to: string): number {
+  if (!ISO.test(from) || !ISO.test(to)) return 0;
+  const [fy, fm, fd] = from.split("-").map(Number);
+  const [ty, tm, td] = to.split("-").map(Number);
+  const months = (ty - fy) * 12 + (tm - fm) - (td < fd ? 1 : 0);
+  return Math.max(0, months);
+}
+function addMonths(date: string, months: number): string {
+  const [y, m, d] = date.split("-").map(Number);
+  const first = new Date(Date.UTC(y, m - 1 + months, 1));
+  const last = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate();
+  return `${first.getUTCFullYear()}-${String(first.getUTCMonth() + 1).padStart(2, "0")}-${String(Math.min(d, last)).padStart(2, "0")}`;
+}
+
+/** Shares vested on a given day: nothing before the cliff, then in equal monthly steps. Whole shares, rounded down. */
+export function vestedShares(v: VestingInput, asOf: string): number {
+  const months = Math.max(0, Math.floor(v.vestMonths || 0));
+  if (!months || !v.start || !ISO.test(v.start)) return v.shares;
+  const elapsed = monthsBetween(v.start, asOf);
+  if (asOf < v.start || elapsed < Math.max(0, v.cliffMonths || 0)) return 0;
+  if (elapsed >= months) return v.shares;
+  return Math.floor((v.shares * elapsed) / months);
+}
+
+/** Where a holder stands today. Someone who left keeps what had vested on their last day; the rest goes back to the company. */
+export function standing(v: VestingInput, today: string): Standing {
+  const vests = !!(v.vestMonths && v.vestMonths > 0 && v.start && ISO.test(v.start));
+  const left = !!(v.end && ISO.test(v.end) && v.end <= today);
+  const vested = vestedShares(v, left ? v.end! : today);
+  const held = left && vests ? vested : v.shares;
+  return { held, granted: v.shares, vested: vests ? vested : v.shares, forfeited: v.shares - held, left, vests, fullyVestedOn: vests ? addMonths(v.start!, Math.floor(v.vestMonths!)) : null };
+}

@@ -159,7 +159,11 @@ CREATE TABLE IF NOT EXISTS holders (
   share_class TEXT NOT NULL DEFAULT 'Common',
   shares REAL NOT NULL DEFAULT 0,
   notes TEXT,
-  position INTEGER NOT NULL DEFAULT 0
+  position INTEGER NOT NULL DEFAULT 0,
+  start_date TEXT,
+  end_date TEXT,
+  vest_months INTEGER,
+  cliff_months INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS safes (
@@ -399,6 +403,13 @@ function open(): Database.Database {
       d.exec("ALTER TABLE mcp_tokens ADD COLUMN expires_at TEXT NOT NULL DEFAULT '2000-01-01 00:00:00'");
       d.exec("ALTER TABLE mcp_tokens ADD COLUMN can_read INTEGER NOT NULL DEFAULT 0");
       d.exec("UPDATE mcp_tokens SET expires_at = datetime('now', '+30 days'), can_read = 1");
+    } catch {
+      /* another process added them first */
+    }
+  }
+  if (!hasColumn("holders", "start_date")) {
+    try {
+      for (const col of ["start_date TEXT", "end_date TEXT", "vest_months INTEGER", "cliff_months INTEGER"]) d.exec(`ALTER TABLE holders ADD COLUMN ${col}`);
     } catch {
       /* another process added them first */
     }

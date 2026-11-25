@@ -5,6 +5,7 @@ import { allFolders, visibleDocuments } from "@/lib/docs";
 import { readFile } from "@/lib/storage";
 import { fileKind, watermarkPdf } from "@/lib/watermark";
 import { buildZip } from "@/lib/zip";
+import { listHolders } from "@/lib/rounds";
 
 const MAX_ZIP_BYTES = 400 * 1024 * 1024;
 
@@ -44,11 +45,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ name: s
 
   if (name === "cap-table.csv") {
     if (!need("captable")) return deny(403, "Not available.");
-    const holders = q<{ name: string; kind: string; share_class: string; shares: number }>("SELECT name, kind, share_class, shares FROM holders ORDER BY position, id");
+    const holders = listHolders();
     const total = holders.reduce((n, h) => n + h.shares, 0);
     logActivity(me, "export.csv", undefined, undefined, "cap table");
     return file(
-      csv(["Holder", "Type", "Class", "Shares", "Fully diluted %"], [...holders.map((h) => [h.name, h.kind, h.share_class, h.shares, total ? ((h.shares / total) * 100).toFixed(4) : ""]), ["Total", "", "", total, total ? "100.0000" : ""]]),
+      csv(["Holder", "Type", "Class", "Shares", "Fully diluted %", "Granted", "Vested", "Started", "Left", "Vesting months", "Cliff months"], [...holders.map((h) => [h.name, h.kind, h.share_class, h.shares, total ? ((h.shares / total) * 100).toFixed(4) : "", h.granted, h.vested, h.start_date ?? "", h.end_date ?? "", h.vest_months ?? "", h.cliff_months ?? ""]), ["Total", "", "", total, total ? "100.0000" : ""]]),
       `${company}-cap-table-${today}.csv`,
       "text/csv; charset=utf-8",
     );

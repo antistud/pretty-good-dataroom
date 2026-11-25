@@ -10,6 +10,7 @@ import { safeOwnershipToday } from "@/lib/captable";
 import { safeInputs } from "@/lib/rounds";
 import { Md, PageHead } from "@/components/ui";
 import { ExportBar } from "@/components/Export";
+import { listHolders } from "@/lib/rounds";
 
 /**
  * Everything this person may see, on one page laid out for paper:
@@ -32,7 +33,7 @@ export default async function Pack() {
       )
     : [];
   const team = see("team") ? q<{ id: number; name: string; title: string | null; bio: string | null }>("SELECT id, name, title, bio FROM team_members ORDER BY position, id") : [];
-  const holders = see("captable") ? q<{ id: number; name: string; kind: string; share_class: string; shares: number }>("SELECT id, name, kind, share_class, shares FROM holders ORDER BY position, id") : [];
+  const holders = see("captable") ? listHolders().filter((h) => h.shares > 0) : [];
   const totalShares = holders.reduce((n, h) => n + h.shares, 0);
   const safes = see("captable")
     ? q<{ id: number; investor_name: string; amount: number; valuation_cap: number | null; discount: number | null; kind: string; status: string }>("SELECT id, investor_name, amount, valuation_cap, discount, kind, status FROM safes ORDER BY signed_on IS NULL, signed_on, id")

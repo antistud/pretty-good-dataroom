@@ -32,6 +32,14 @@ Under **The room** you will find:
 - **Cap table**, with shareholders, the option pool and SAFEs, and a view of what happens at a priced round.
 - **Financials**.
 
+### Vesting, and people who have left
+
+On the cap table, open **Dates and vesting** for a holder to record when they started, how long their shares vest over (usually 48 months) and the cliff (usually 12).
+
+If someone leaves, add the date under **Left on**. The cap table then counts only the shares that had vested on their last day, shows what went back to the company, and recalculates everyone's percentage. For example, a founder granted 4,800,000 shares on four-year vesting who leaves after 21 months keeps 2,100,000.
+
+Vesting is worked out monthly with nothing before the cliff. If your agreement says something different (acceleration, a negotiated exit), leave the vesting fields blank and enter the number of shares the person actually kept.
+
 ### What is still missing
 
 The room notices when what you have entered points to paperwork that is not there. A signed SAFE on the cap table with no signed copy, founders with no stock purchase or IP assignment agreement, an option pool with no plan, an open round with no deck: each appears under **Still to upload** on the Documents page, with the reason and a button that opens the right folder.

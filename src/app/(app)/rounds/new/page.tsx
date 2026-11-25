@@ -4,12 +4,13 @@ import { levelOptions } from "@/lib/format";
 import { safeOwnershipToday } from "@/lib/captable";
 import { safeInputs } from "@/lib/rounds";
 import { RoundWizard, type WizardContext } from "@/components/RoundWizard";
+import { listHolders } from "@/lib/rounds";
 
 /** Plans a round by asking the founder one question at a time. */
 export default async function NewRound() {
   await requireStaff();
   const months = q<{ revenue: number; expenses: number; cash: number }>("SELECT revenue, expenses, cash FROM financials ORDER BY month DESC LIMIT 3");
-  const holders = q<{ kind: string; shares: number }>("SELECT kind, shares FROM holders");
+  const holders = listHolders();
   const total = holders.reduce((n, h) => n + h.shares, 0);
   const founders = holders.filter((h) => h.kind === "founder").reduce((n, h) => n + h.shares, 0);
   const audiences = levelOptions().filter((o) => o.level >= 1 && o.level < 100);

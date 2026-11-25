@@ -1,5 +1,5 @@
 import { getSetting, q, q1 } from "./db";
-import type { HolderInput, SafeInput } from "./captable";
+import { standing, type HolderInput, type SafeInput, type Standing } from "./captable";
 
 /** discount and new_pool_pct are stored as fractions (0.2 = 20%). */
 export type RoundRow = {
@@ -34,7 +34,20 @@ export type SafeRow = {
   document_id: number | null;
   notes: string | null;
 };
-export type HolderRow = { id: number; name: string; kind: HolderInput["kind"]; share_class: string; shares: number; notes: string | null; position: number };
+export type HolderRow = {
+  id: number; name: string; kind: HolderInput["kind"]; share_class: string; notes: string | null; position: number;
+  /** Shares that count on the cap table today: everything granted, or only what had vested if the person has left. */
+  shares: number;
+  start_date: string | null; end_date: string | null; vest_months: number | null; cliff_months: number | null;
+} & Standing;
+
+/** Every holder with their dates applied. Use this, not the table, wherever shares are counted. */
+export function listHolders(today = new Date().toISOString().slice(0, 10)): HolderRow[] {
+  return q<Omit<HolderRow, keyof Standing>>("SELECT * FROM holders ORDER BY position, id").map((h) => {
+    const st = standing({ shares: h.shares, start: h.start_date, end: h.end_date, vestMonths: h.vest_months, cliffMonths: h.cliff_months }, today);
+    return { ...h, ...st, shares: st.held };
+  });
+}
 
 export const ROUND_STATUSES = ["planning", "open", "closing", "closed"] as const;
 export const STATUS_LABEL: Record<RoundRow["status"], string> = { planning: "Planning", open: "Open", closing: "Closing", closed: "Closed" };
@@ -62,7 +75,7 @@ export function currentRound(): RoundRow | undefined {
 }
 
 export function holderInputs(): HolderInput[] {
-  return q<HolderRow>("SELECT * FROM holders ORDER BY position, id").map((h) => ({ name: h.name, kind: h.kind, shareClass: h.share_class, shares: h.shares }));
+  return listHolders().filter((h) => h.shares > 0).map((h) => ({ name: h.name, kind: h.kind, shareClass: h.share_class, shares: h.shares }));
 }
 export function safeInputs(where = "", ...params: unknown[]): SafeInput[] {
   return q<SafeRow>(`SELECT * FROM safes ${where} ORDER BY signed_on, id`, ...params).map((s) => ({

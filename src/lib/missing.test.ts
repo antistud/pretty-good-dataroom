@@ -58,4 +58,11 @@ describe("findMissing", () => {
     expect(found[0].title).toBe("IP assignment agreements for 5 people");
     expect(findMissing({ ...base, team, dismissed: ["ip"] })).toEqual([]);
   });
+
+  it("asks for the paperwork when someone left before fully vesting", () => {
+    const holders = [{ name: "Jeff Stafford", kind: "founder", shares: 1_000_000, left: true, forfeited: 3_000_000 }];
+    const docs = ["certificate of incorporation", "bylaws", "board consent", "stock purchase agreement jeff", "83(b)", "piia jeff stafford"];
+    expect(keys({ holders, docs })).toEqual(["leaving:jeff stafford"]);
+    expect(keys({ holders, docs: [...docs, "Stafford - share repurchase notice.pdf"] })).toEqual([]);
+  });
 });

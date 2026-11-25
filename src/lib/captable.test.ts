@@ -121,3 +121,47 @@ describe("priced round", () => {
     expect(simulate(holders, [{ name: "A", amount: 6_000_000, kind: "post", cap: 5_000_000 }], round).ok).toBe(false);
   });
 });
+
+import { monthsBetween, standing, vestedShares } from "./captable";
+
+describe("vesting and dates", () => {
+  const grant = { shares: 4_800_000, start: "2024-01-15", vestMonths: 48, cliffMonths: 12 };
+
+  it("counts whole months, completing on the same day of the month", () => {
+    expect(monthsBetween("2024-01-15", "2024-02-14")).toBe(0);
+    expect(monthsBetween("2024-01-15", "2024-02-15")).toBe(1);
+    expect(monthsBetween("2024-01-31", "2025-01-30")).toBe(11);
+    expect(monthsBetween("2025-01-01", "2024-01-01")).toBe(0);
+  });
+
+  it("vests nothing before the cliff, then monthly, then everything", () => {
+    expect(vestedShares(grant, "2025-01-14")).toBe(0);
+    expect(vestedShares(grant, "2025-01-15")).toBe(1_200_000);
+    expect(vestedShares(grant, "2025-07-15")).toBe(1_800_000);
+    expect(vestedShares(grant, "2028-01-15")).toBe(4_800_000);
+    expect(vestedShares(grant, "2030-01-01")).toBe(4_800_000);
+  });
+
+  it("treats shares with no schedule as fully vested", () => {
+    expect(vestedShares({ shares: 1000 }, "2020-01-01")).toBe(1000);
+    expect(standing({ shares: 1000, end: "2025-01-01" }, "2026-01-01")).toMatchObject({ held: 1000, forfeited: 0, left: true, vests: false });
+  });
+
+  it("someone still here holds everything granted, with vesting shown", () => {
+    expect(standing(grant, "2025-07-15")).toMatchObject({ held: 4_800_000, vested: 1_800_000, forfeited: 0, left: false, fullyVestedOn: "2028-01-15" });
+  });
+
+  it("someone who left before fully vesting keeps only what had vested", () => {
+    const s = standing({ ...grant, end: "2025-10-20" }, "2026-11-25");
+    expect(s).toMatchObject({ held: 2_100_000, vested: 2_100_000, forfeited: 2_700_000, left: true });
+    expect(standing({ ...grant, end: "2024-09-01" }, "2026-11-25")).toMatchObject({ held: 0, forfeited: 4_800_000 });
+  });
+
+  it("a leaving date in the future changes nothing yet", () => {
+    expect(standing({ ...grant, end: "2027-01-15" }, "2026-01-15")).toMatchObject({ held: 4_800_000, left: false });
+  });
+
+  it("rounds down to whole shares", () => {
+    expect(vestedShares({ shares: 1000, start: "2024-01-01", vestMonths: 48 }, "2024-02-01")).toBe(20);
+  });
+});

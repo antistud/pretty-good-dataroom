@@ -6,7 +6,7 @@ import { logView } from "@/lib/activity";
 import { getDocument, visibleDocuments } from "@/lib/docs";
 import { fmtDate, money, num, pct } from "@/lib/format";
 import { safeOwnershipToday, simulate } from "@/lib/captable";
-import { currentRound, holderInputs, safeInputs, type HolderRow, type RoundRow, type SafeRow } from "@/lib/rounds";
+import { currentRound, holderInputs, listHolders, safeInputs, type HolderRow, type RoundRow, type SafeRow } from "@/lib/rounds";
 import { Field, Flash, Hint, PageHead } from "@/components/ui";
 import { ProFormaStats, ProFormaTable } from "@/components/captable";
 import { deleteHolderAction, deleteSafeAction, saveHolderAction, saveSafeAction } from "./actions";
@@ -24,7 +24,8 @@ export default async function CapTable({ searchParams }: { searchParams: Promise
   logView(me, "section.view", undefined, undefined, "captable");
   const sp = await searchParams;
 
-  const holders = q<HolderRow>("SELECT * FROM holders ORDER BY position, id");
+  const holders = listHolders();
+  const returned = holders.reduce((n, h) => n + h.forfeited, 0);
   const safes = q<SafeRow & { round_name: string | null }>("SELECT s.*, r.name AS round_name FROM safes s LEFT JOIN rounds r ON r.id = s.round_id ORDER BY s.signed_on, s.id");
   const totalShares = holders.reduce((s, h) => s + h.shares, 0);
   const safeTotal = safes.reduce((s, x) => s + x.amount, 0);
@@ -95,6 +96,16 @@ export default async function CapTable({ searchParams }: { searchParams: Promise
     </form>
   );
 
+  /** One plain sentence about a holder's dates, or nothing when there are none. */
+  const vestingLine = (h: HolderRow): string => {
+    const schedule = h.vests ? `${h.vest_months}-month vesting${h.cliff_months ? ` with a ${h.cliff_months}-month cliff` : ""}` : "";
+    if (h.left && h.vests) return h.forfeited > 0 ? `Started ${fmtDate(h.start_date)}. Kept ${num(h.held)} of ${num(h.granted)} shares; ${num(h.forfeited)} had not vested and went back to the company.` : `Started ${fmtDate(h.start_date)}. Fully vested before leaving.`;
+    if (h.left) return h.start_date ? `Here from ${fmtDate(h.start_date)}.` : "";
+    if (h.vests) return h.vested >= h.granted ? `Fully vested (${schedule}, from ${fmtDate(h.start_date)}).` : `${num(h.vested)} vested so far; ${schedule} from ${fmtDate(h.start_date)}, complete ${fmtDate(h.fullyVestedOn)}.`;
+    if (h.end_date) return `Leaving ${fmtDate(h.end_date)}.`;
+    return h.start_date ? `Since ${fmtDate(h.start_date)}.` : "";
+  };
+
   const holderForm = (h?: HolderRow) => (
     <form action={saveHolderAction} className="inline-form">
       {h && <input type="hidden" name="id" value={h.id} />}
@@ -105,8 +116,18 @@ export default async function CapTable({ searchParams }: { searchParams: Promise
         </select>
       </Field>
       <Field label="Class"><input name="share_class" maxLength={60} defaultValue={h?.share_class ?? "Common"} /></Field>
-      <Field label="Shares"><input name="shares" required inputMode="decimal" defaultValue={h?.shares} /></Field>
+      <Field label="Shares granted"><input name="shares" required inputMode="decimal" defaultValue={h?.granted} /></Field>
       <Field label="Notes"><input name="notes" maxLength={500} defaultValue={h?.notes ?? ""} /></Field>
+      <details className="dates" open={!!(h?.start_date || h?.end_date || h?.vest_months)}>
+        <summary className="small">Dates and vesting</summary>
+        <p className="muted small" style={{ margin: "6px 0 10px", maxWidth: "60ch" }}>Add these when shares vest over time, or when someone has left. A person who leaves before they are fully vested keeps what had vested on their last day; the rest stops counting on the cap table. Leave it all blank for shares that are simply owned.</p>
+        <div className="inline-form">
+          <Field label="Started"><input type="date" name="start_date" defaultValue={h?.start_date ?? ""} /></Field>
+          <Field label="Vests over (months)" hint="Usually 48."><input name="vest_months" inputMode="numeric" defaultValue={h?.vest_months ?? ""} placeholder="48" /></Field>
+          <Field label="Cliff (months)" hint="Usually 12."><input name="cliff_months" inputMode="numeric" defaultValue={h?.vest_months ? h?.cliff_months ?? "" : ""} placeholder="12" /></Field>
+          <Field label="Left on" hint="Blank if still here."><input type="date" name="end_date" defaultValue={h?.end_date ?? ""} /></Field>
+        </div>
+      </details>
       <button className="btn primary">{h ? "Save" : "Add holder"}</button>
     </form>
   );
@@ -142,7 +163,11 @@ export default async function CapTable({ searchParams }: { searchParams: Promise
               <tbody>
                 {holders.map((h) => (
                   <tr key={h.id}>
-                    <td>{h.name}{h.notes && <div className="muted small">{h.notes}</div>}</td>
+                    <td>
+                      {h.name}{h.left && <span className="badge grey" style={{ marginLeft: 8 }}>Left {fmtDate(h.end_date)}</span>}
+                      {vestingLine(h) && <div className="muted small">{vestingLine(h)}</div>}
+                      {h.notes && <div className="muted small">{h.notes}</div>}
+                    </td>
                     <td className="small">{KIND_LABEL[h.kind]}</td>
                     <td className="small">{h.share_class}</td>
                     <td className="num">{num(h.shares)}</td>
@@ -163,6 +188,7 @@ export default async function CapTable({ searchParams }: { searchParams: Promise
             </table>
           </div>
         )}
+        {returned > 0 && <p className="muted small" style={{ marginTop: 10 }}>{num(returned)} unvested shares from people who have left are not counted above.{me.isStaff && " If they were options that return to your pool, add them to the pool row."}</p>}
         {me.isStaff && (
           <>
             <hr />

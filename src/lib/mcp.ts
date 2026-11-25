@@ -4,6 +4,7 @@ import { hashToken } from "./auth";
 import { logActivity } from "./activity";
 import { parseAnswer } from "./docfill";
 import { notify } from "./notify";
+import { listHolders } from "./rounds";
 
 /**
  * A small MCP server, so a founder can connect the AI assistant they already
@@ -152,7 +153,7 @@ function roomSnapshot() {
     website: getSetting("fact_website") || null,
   };
   const team = q<{ name: string; title: string | null }>("SELECT name, title FROM team_members ORDER BY position, id");
-  const holders = q<{ name: string; kind: string; share_class: string; shares: number }>("SELECT name, kind, share_class, shares FROM holders ORDER BY position, id");
+  const holders = listHolders().map((h) => ({ name: h.name, kind: h.kind, share_class: h.share_class, shares: h.shares, ...(h.left ? { left_on: h.end_date } : {}) }));
   const rounds = q("SELECT name, instrument, status, target_amount, valuation_cap, discount, min_check FROM rounds ORDER BY id");
   const safes = q("SELECT investor_name AS investor, amount, valuation_cap, discount, kind AS type, status, signed_on FROM safes ORDER BY id");
   const missing = [
