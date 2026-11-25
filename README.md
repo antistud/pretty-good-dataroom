@@ -2,7 +2,7 @@
 
 A self-hosted data room and fundraising workspace for pre-seed startups. One command to install, one SQLite file, and email as the only outside service.
 
-**Website and documentation:** https://antistud.github.io/pretty-good-dataroom/
+**Documentation:** [getting started](docs/getting-started.md) · [email](docs/email.md) · [AI setup](docs/ai-connector.md) · [using the room](docs/using-the-room.md) · [running it](docs/running.md) · [locked out](docs/locked-out.md) · [security](SECURITY.md)
 
 It does two jobs:
 
@@ -71,7 +71,7 @@ npm install
 SMTP_HOST=console npm run dev   # http://localhost:3000, data in ./data; emails (and sign-in codes) print to the terminal
 npm test           # cap table maths
 npm run typecheck
-node website/build.mjs        # builds the website into website/_site from docs/*.md and SECURITY.md
+npm run site       # builds the project website into website/_site from docs/*.md and SECURITY.md
 ```
 
 Stack: Next.js (App Router, server actions), TypeScript, better-sqlite3, pdf-lib, nodemailer. The schema is in `src/lib/db.ts` and is created on first start.

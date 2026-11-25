@@ -1,21 +1,16 @@
 name: Website
 
-# Builds the project website (website/ plus the markdown in docs/) and publishes it with GitHub Pages.
-# One-time setup in the repository: Settings → Pages → Source: "GitHub Actions".
+# Checks that the project website (website/ plus the markdown in docs/) builds and has no broken links.
+# Publishing is done by Cloudflare, which watches the repository and runs the same build (see wrangler.jsonc).
 on:
   push:
     branches: [main]
-    paths: ["website/**", "docs/**", "SECURITY.md", ".github/workflows/site.yml"]
+    paths: ["website/**", "docs/**", "SECURITY.md", "wrangler.jsonc", ".github/workflows/site.yml"]
   pull_request:
-    paths: ["website/**", "docs/**", "SECURITY.md", ".github/workflows/site.yml"]
-  workflow_dispatch:
+    paths: ["website/**", "docs/**", "SECURITY.md", "wrangler.jsonc", ".github/workflows/site.yml"]
 
 permissions:
   contents: read
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
 
 jobs:
   build:
@@ -28,22 +23,4 @@ jobs:
           cache: npm
       # Only the typefaces are needed from node_modules; no install scripts run.
       - run: npm ci --ignore-scripts
-      - run: node website/build.mjs
-      - if: github.event_name != 'pull_request'
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: website/_site
-
-  deploy:
-    if: github.event_name != 'pull_request'
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - run: npm run site

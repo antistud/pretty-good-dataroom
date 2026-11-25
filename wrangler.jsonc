@@ -1,0 +1,12 @@
+// Hosts the project website (not the data room itself) on Cloudflare as static files.
+// In Cloudflare: Workers & Pages → Create → Import a repository, then
+//   Build command:  npm run site
+//   Deploy command: npx wrangler deploy
+{
+  "name": "pretty-good-dataroom",
+  "compatibility_date": "2026-01-01",
+  "assets": {
+    "directory": "./website/_site",
+    "not_found_handling": "404-page"
+  }
+}

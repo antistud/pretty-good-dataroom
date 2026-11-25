@@ -1,5 +1,6 @@
 // Builds the project website into website/_site. No dependencies:
-//   node website/build.mjs
+//   npm run site        (or: node website/build.mjs)
+// Hosted on Cloudflare from wrangler.jsonc at the repository root.
 // Documentation pages are the markdown files in docs/ plus SECURITY.md, so
 // the website and the repository never say different things.
 import fs from "node:fs";
@@ -10,6 +11,8 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, "..");
 const OUT = path.join(HERE, "_site");
 const REPO = "https://github.com/antistud/pretty-good-dataroom";
+// Where the site is served from. "/" on its own domain; "/repository-name/" on a GitHub project page.
+const BASE = (process.env.SITE_BASE || "/").replace(/\/?$/, "/");
 
 /** The documentation, in reading order. */
 const DOCS = [
@@ -182,7 +185,7 @@ fs.writeFileSync(path.join(OUT, "docs", "index.html"), `<!doctype html><meta cha
 
 const home = fs.readFileSync(path.join(HERE, "home.html"), "utf8");
 fs.writeFileSync(path.join(OUT, "index.html"), page({ base: "", title: "Pretty Good Data Room: a self-hosted data room for your first raise", description: "An open-source, self-hosted data room and fundraising workspace for pre-seed startups. One command to install, one file of data, no passwords.", body: home, current: "home" }));
-fs.writeFileSync(path.join(OUT, "404.html"), page({ base: "/pretty-good-dataroom/", title: "Page not found · Pretty Good Data Room", description: "That page does not exist.", body: `<main class="prose" style="margin:80px auto;"><h1>That page does not exist</h1><p>It may have moved. Try the <a href="/pretty-good-dataroom/docs/getting-started.html">documentation</a> or the <a href="/pretty-good-dataroom/">home page</a>.</p></main>`, current: "" }));
+fs.writeFileSync(path.join(OUT, "404.html"), page({ base: BASE, title: "Page not found · Pretty Good Data Room", description: "That page does not exist.", body: `<main class="prose" style="margin:80px auto;padding:0 28px"><h1>That page does not exist</h1><p>It may have moved. Try the <a href="${BASE}docs/getting-started.html">documentation</a> or the <a href="${BASE}">home page</a>.</p></main>`, current: "" }));
 
 // Every internal link must lead somewhere.
 let broken = 0;
