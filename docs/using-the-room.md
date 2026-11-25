@@ -32,6 +32,12 @@ Under **The room** you will find:
 - **Cap table**, with shareholders, the option pool and SAFEs, and a view of what happens at a priced round.
 - **Financials**.
 
+### What is still missing
+
+The room notices when what you have entered points to paperwork that is not there. A signed SAFE on the cap table with no signed copy, founders with no stock purchase or IP assignment agreement, an option pool with no plan, an open round with no deck: each appears under **Still to upload** on the Documents page, with the reason and a button that opens the right folder.
+
+It works from document and file names, so name files plainly ("SAFE - Oak Ventures (signed).pdf"). If something does not apply to your company, mark it **Not needed**. It is a prompt based on common pre-seed diligence, not legal advice.
+
 The fastest way to fill these is to [let your AI assistant read your documents](ai-connector.md).
 
 ## Plan the round

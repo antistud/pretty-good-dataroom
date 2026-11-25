@@ -9,6 +9,7 @@ import { Welcome } from "@/components/Path";
 import { Greeting } from "@/components/Greeting";
 import { roomHealth } from "@/lib/health";
 import { roomIsEmpty, sampleLoaded } from "@/lib/sample";
+import { missingDocuments } from "@/lib/missing-room";
 import { clearSampleAction, loadSampleAction } from "@/app/(app)/home/actions";
 import { SEASONS, currentSeason, noteOfTheDay } from "@/lib/mentor";
 
@@ -78,6 +79,11 @@ export default async function StaffHome({ me }: { me: Viewer }) {
         AND (i.org_id IS NULL OR i.org_id NOT IN (SELECT org_id FROM leads WHERE org_id IS NOT NULL AND stage != 'passed'))`,
     new Date().toISOString(),
   );
+  const missing = missingDocuments();
+  if (missing.length > 0) {
+    const rest = missing.length - 1;
+    items.push({ text: `The room mentions paperwork that is not uploaded yet: ${missing[0].title}${rest > 0 ? `, and ${rest} more` : ""}.`, href: "/documents#missing", cta: "See what to upload" });
+  }
   for (const i of staleInvites) items.push({ text: `${i.email} was invited ${ago(i.created_at)} and has not joined. Nudge them or send a fresh link.`, href: "/people", cta: "People & access" });
 
   items.sort((a, b) => Number(!!b.urgent) - Number(!!a.urgent));

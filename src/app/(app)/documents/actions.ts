@@ -8,6 +8,7 @@ import { logActivity } from "@/lib/activity";
 import { flash } from "@/lib/flash";
 import { formLevel, formStr } from "@/lib/format";
 import { canWatermark, fileKind } from "@/lib/watermark";
+import { dismissMissing, restoreMissing } from "@/lib/missing-room";
 
 const MAX_BYTES = 50 * 1024 * 1024;
 
@@ -197,4 +198,23 @@ export async function deleteDocumentAction(form: FormData) {
   for (const k of keys) await deleteFile(k.storage_key);
   logActivity(me, "doc.delete", "document", docId, doc!.name);
   flash(folderUrl(doc!.folder_id), `"${doc!.name}" was deleted.`);
+}
+
+/** Where a "still to upload" form may send the founder back to. */
+const backTo = (form: FormData) => (["/documents", "/fill", "/home"].includes(String(form.get("back"))) ? String(form.get("back")) : "/documents");
+
+export async function dismissMissingAction(form: FormData) {
+  const me = await requireStaff();
+  const key = formStr(form.get("key"), 120);
+  if (key) {
+    dismissMissing(key);
+    logActivity(me, "documents.not_needed", undefined, undefined, key);
+  }
+  flash(backTo(form), "Hidden. You can bring it back from the bottom of that list.");
+}
+
+export async function restoreMissingAction(form: FormData) {
+  await requireStaff();
+  restoreMissing();
+  flash(backTo(form), "Showing everything again.");
 }

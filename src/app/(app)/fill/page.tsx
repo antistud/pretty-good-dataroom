@@ -8,6 +8,7 @@ import { documentsPrompt, parseAnswer } from "@/lib/docfill";
 import { COMPANY_FIELDS, describe } from "@/lib/docfill-apply";
 import { Field, Flash, PageHead } from "@/components/ui";
 import { CopyButton } from "@/components/CopyButton";
+import { MissingDocs } from "@/components/MissingDocs";
 import { AssistantHelp } from "@/components/AssistantHelp";
 import { applyProposalAction, createConnectorAction, dismissProposalAction, hideConnectorAction, pasteAnswerAction, revokeConnectorAction } from "./actions";
 
@@ -182,9 +183,10 @@ export default async function Fill({ searchParams }: { searchParams: Promise<Rec
 
       <div className="card">
         <h2>3. Review, then put the files in the room</h2>
-        <p style={{ maxWidth: "64ch" }}>Suggestions appear at the top of this page for you to tick and apply. Then add the documents themselves under <Link href="/documents">Documents</Link>, so investors can read the originals.</p>
+        <p style={{ maxWidth: "64ch" }}>Suggestions appear at the top of this page for you to tick and apply. Your assistant read the documents, but the room does not have them yet: add the files themselves under <Link href="/documents">Documents</Link>, so investors can read the originals. Once details are applied, the list below tells you which ones are still missing.</p>
         <p className="muted small" style={{ maxWidth: "64ch" }}>Your documents go to whichever AI service you choose, under its terms, not through this data room. The data room never sends your files anywhere.</p>
       </div>
+      <MissingDocs back="/fill" heading="Files the room is still missing" />
     </>
   );
 }

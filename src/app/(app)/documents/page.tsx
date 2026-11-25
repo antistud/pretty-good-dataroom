@@ -5,6 +5,7 @@ import { visibleDocuments, visibleFolders, type FolderRow } from "@/lib/docs";
 import { logView } from "@/lib/activity";
 import { fileSize, fmtDate, levelName } from "@/lib/format";
 import { Field, Flash, Hint, LevelSelect, PageHead } from "@/components/ui";
+import { MissingDocs } from "@/components/MissingDocs";
 import { createFolderAction, deleteFolderAction, updateFolderAction, uploadDocumentAction } from "./actions";
 
 export default async function Documents({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
@@ -55,6 +56,8 @@ export default async function Documents({ searchParams }: { searchParams: Promis
         </Hint>
       )}
 
+      {me.isStaff && <MissingDocs back="/documents" />}
+
       {folders.length === 0 ? (
         <div className="empty">{me.isStaff ? "No folders yet. Create one below." : "Nothing has been shared with you here yet. Check back soon."}</div>
       ) : (
@@ -103,7 +106,7 @@ export default async function Documents({ searchParams }: { searchParams: Promis
 
             {me.isStaff && current && (
               <>
-                <div className="card">
+                <div className="card" id="upload">
                   <h2>Upload to &ldquo;{current.name}&rdquo;</h2>
                   <form action={uploadDocumentAction}>
                     <input type="hidden" name="folder_id" value={current.id} />

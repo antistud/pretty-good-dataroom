@@ -17,6 +17,7 @@ It does two jobs:
 | Organisations | Access belongs to the firm. Members can invite their own colleagues, who get the same access and never more |
 | Access tiers | Supporter, then investor tiers (Teaser, Diligence, Closing by default). Every folder, document, section, update section and intro ask has an audience |
 | Documents | Folders seeded from a pre-seed template, versions, in-browser viewing, PDFs watermarked with the viewer's email, per-tier download permission |
+| What is missing | When the cap table, SAFEs, team or an open round point to paperwork that is not in the room (a signed SAFE, IP assignments, the certificate of incorporation, the option plan…), founders get a "Still to upload" list with the reason for each and a button to the right folder |
 | Cap table and SAFEs | Holders, option pool, SAFEs (post- and pre-money, cap, discount, MFN) and a pro-forma conversion at a priced round |
 | Rounds | A step-by-step planner that asks what the money is for, works out how much to raise and at what cap from your own numbers, and explains what founders usually do. Then open, planned and closed rounds with progress, ready-to-raise and closing checklists |
 | Pipeline | Import a contact list from a CSV file, with a preview and duplicate detection. Stage board, per-investor "do this next" guidance, engagement signals, diligence tracker |
