@@ -54,6 +54,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               ...on(show("captable"), { label: "Cap table", href: "/captable" }),
               ...on(show("financials"), { label: "Financials", href: "/financials" }),
               ...custom,
+              { label: "From your documents", href: "/fill" },
             ],
           },
           { key: "updates", label: "Updates", items: [{ label: "Updates", href: "/updates" }] },

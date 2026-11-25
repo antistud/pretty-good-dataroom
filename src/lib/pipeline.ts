@@ -244,6 +244,8 @@ function describe(action: string, detail: string | null, docName: string | null)
     case "invite.create": return `invited a colleague${detail ? ` (${detail.split(" ")[0]})` : ""}`;
     case "request.create": return `asked: ${(detail ?? "").replace(/^[a-z]+: /, "")}`;
     case "request.reply": return "replied on a request";
+    case "proposal.create": return `sent suggestions for the room (${detail ?? ""})`;
+    case "proposal.apply": return `applied suggestions: ${detail ?? ""}`;
     case "lead.import": return `imported ${detail ?? "contacts"} into the pipeline`;
     case "export.csv": return `downloaded the ${detail ?? "data"} as a spreadsheet`;
     case "export.zip": return `downloaded all documents (${detail ?? "zip"})`;

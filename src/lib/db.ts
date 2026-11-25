@@ -327,6 +327,27 @@ CREATE TABLE IF NOT EXISTS update_reactions (
   PRIMARY KEY (update_id, user_id)
 );
 
+-- Links that let a founder's own AI assistant talk to this room (MCP). Only a hash of the secret is stored.
+CREATE TABLE IF NOT EXISTS mcp_tokens (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,
+  label TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  last_used_at TEXT,
+  revoked INTEGER NOT NULL DEFAULT 0
+);
+
+-- Suggested changes waiting for a founder to review. Nothing here is live until it is applied.
+CREATE TABLE IF NOT EXISTS proposals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  source TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','applied','dismissed')),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- Manually ticked checklist items (onboarding steps, founder checklists).
 CREATE TABLE IF NOT EXISTS checks (
   scope TEXT NOT NULL,

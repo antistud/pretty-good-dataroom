@@ -1,0 +1,167 @@
+import Link from "next/link";
+import { cookies } from "next/headers";
+import { requireStaff } from "@/lib/auth";
+import { getSetting, q } from "@/lib/db";
+import { ago, money, num } from "@/lib/format";
+import { documentsPrompt, parseAnswer } from "@/lib/docfill";
+import { COMPANY_FIELDS, describe } from "@/lib/docfill-apply";
+import { Field, Flash, PageHead } from "@/components/ui";
+import { CopyButton } from "@/components/CopyButton";
+import { applyProposalAction, createConnectorAction, dismissProposalAction, hideConnectorAction, pasteAnswerAction, revokeConnectorAction } from "./actions";
+
+const Tick = ({ name, checked = true, children }: { name: string; checked?: boolean; children: React.ReactNode }) => (
+  <label className="row" style={{ alignItems: "flex-start", flexWrap: "nowrap", padding: "7px 0" }}>
+    <input type="checkbox" name={name} defaultChecked={checked} style={{ marginTop: 4 }} />
+    <span style={{ minWidth: 0 }}>{children}</span>
+  </label>
+);
+
+export default async function Fill({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
+  const me = await requireStaff();
+  const company = getSetting("company_name");
+  const fresh = (await cookies()).get("pgd_new_connector")?.value;
+  const connectors = q<{ id: number; label: string; created_at: string; last_used_at: string | null }>("SELECT id, label, created_at, last_used_at FROM mcp_tokens WHERE user_id = ? AND revoked = 0 ORDER BY id DESC", me.id);
+  const proposals = q<{ id: number; source: string; payload: string; created_at: string }>("SELECT id, source, payload, created_at FROM proposals WHERE status = 'pending' ORDER BY id DESC LIMIT 10");
+  const prompt = documentsPrompt(company);
+
+  return (
+    <>
+      <PageHead title="Let your AI do the setup" sub="Hand your pitch deck, formation documents and SAFEs to the AI assistant you already use. It reads them and suggests what goes in the room. You check its work before anything is saved." />
+      <Flash sp={await searchParams} />
+
+      {proposals.length > 0 && (
+        <div id="review">
+          {proposals.map((p) => {
+            const a = parseAnswer(p.payload);
+            if (!a) return null;
+            const d = describe(a);
+            return (
+              <div className="card callout" key={p.id}>
+                <h2>Review what it found</h2>
+                <p className="muted" style={{ marginTop: -6 }}>{p.source === "assistant" ? "Sent by your connected assistant" : "From the answer you pasted"} · {ago(p.created_at)}. Untick anything that is wrong. Nothing is saved until you press the button.</p>
+                <form action={applyProposalAction}>
+                  <input type="hidden" name="proposal_id" value={p.id} />
+                  {a.company && COMPANY_FIELDS.some(([k]) => a.company![k]) && (
+                    <>
+                      <h3>Company</h3>
+                      {COMPANY_FIELDS.filter(([k]) => a.company![k]).map(([key, label]) => {
+                        const now = d.current[key];
+                        const value = a.company![key];
+                        const replaces = !!now && now.trim() !== value.trim();
+                        return (
+                          <Tick key={key} name={`c_${key}`} checked={!replaces}>
+                            <strong>{label}</strong>{replaces && <span className="badge warn" style={{ marginLeft: 8 }}>replaces what you have</span>}{now && !replaces && <span className="badge grey" style={{ marginLeft: 8 }}>same as now</span>}
+                            {key === "overview_markdown" ? <details><summary>Read it ({value.split(/\s+/).length} words)</summary><div className="template">{value}</div></details> : <div>{value}</div>}
+                          </Tick>
+                        );
+                      })}
+                    </>
+                  )}
+                  {a.team.length > 0 && (
+                    <>
+                      <h3 style={{ marginTop: 16 }}>Team</h3>
+                      {a.team.map((m, i) => d.teamExists(m.name)
+                        ? <p key={i} className="muted" style={{ margin: "7px 0 7px 26px" }}>{m.name} <span className="badge grey">already on the team page</span></p>
+                        : <Tick key={i} name={`t_${i}`}><strong>{m.name}</strong>{m.title ? `, ${m.title}` : ""}{m.bio && <div className="muted">{m.bio}</div>}</Tick>)}
+                    </>
+                  )}
+                  {a.holders.length > 0 && (
+                    <>
+                      <h3 style={{ marginTop: 16 }}>Cap table</h3>
+                      {a.holders.map((h, i) => d.holderExists(h.name)
+                        ? <p key={i} className="muted" style={{ margin: "7px 0 7px 26px" }}>{h.name} <span className="badge grey">already on the cap table</span></p>
+                        : <Tick key={i} name={`h_${i}`}><strong>{h.name}</strong> · {num(h.shares)} {h.share_class} shares <span className="muted">· {h.kind === "pool" ? "unissued option pool" : h.kind}</span></Tick>)}
+                    </>
+                  )}
+                  {a.round && (
+                    <>
+                      <h3 style={{ marginTop: 16 }}>Round</h3>
+                      {d.roundExists(a.round.name)
+                        ? <p className="muted" style={{ margin: "7px 0 7px 26px" }}>{a.round.name} <span className="badge grey">a round with this name already exists</span></p>
+                        : <Tick name="r"><strong>{a.round.name}</strong>: raising {money(a.round.target_amount)} {a.round.instrument === "safe" ? "on SAFEs" : "in a priced round"}{a.round.valuation_cap ? ` at a ${money(a.round.valuation_cap, true)} cap` : ""}{a.round.discount_percent ? `, ${a.round.discount_percent}% discount` : ""}{a.round.min_check ? `, ${money(a.round.min_check)} minimum` : ""}.{a.round.use_of_funds && <div className="muted">{a.round.use_of_funds}</div>}<div className="muted small">Created in planning; investors see nothing until you open it.</div></Tick>}
+                    </>
+                  )}
+                  {a.safes.length > 0 && (
+                    <>
+                      <h3 style={{ marginTop: 16 }}>SAFEs</h3>
+                      {a.safes.map((s, i) => d.safeExists(s.investor, s.amount)
+                        ? <p key={i} className="muted" style={{ margin: "7px 0 7px 26px" }}>{s.investor} · {money(s.amount)} <span className="badge grey">already recorded</span></p>
+                        : <Tick key={i} name={`s_${i}`}><strong>{s.investor}</strong> · {money(s.amount)}{s.valuation_cap ? ` at a ${money(s.valuation_cap, true)} cap` : ", no cap"}{s.discount_percent ? `, ${s.discount_percent}% discount` : ""} <span className="muted">· {s.type === "post" ? "post-money" : "pre-money"}{s.mfn ? ", MFN" : ""}{s.signed_on ? `, signed ${s.signed_on}` : ""}</span></Tick>)}
+                    </>
+                  )}
+                  {a.unsure.length > 0 && (
+                    <div className="notice warn" style={{ marginTop: 16 }}>
+                      <strong>It was not sure about</strong>
+                      <ul style={{ margin: "6px 0 0" }}>{a.unsure.map((u, i) => <li key={i}>{u}</li>)}</ul>
+                    </div>
+                  )}
+                  <div className="row" style={{ marginTop: 16 }}>
+                    <button className="btn primary">Add the ticked items to the room</button>
+                    <button className="btn" formAction={dismissProposalAction} formNoValidate>Discard all of it</button>
+                  </div>
+                  <p className="muted small" style={{ marginTop: 10 }}>An AI read your documents, and AIs make mistakes, especially with share counts and SAFE terms. Check the numbers against the signed documents.</p>
+                </form>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="card">
+        <h2>1. Connect your assistant</h2>
+        <p style={{ maxWidth: "64ch" }}>Give Claude, ChatGPT, Grok or any assistant that supports connectors (MCP) a private address for this room. It can then see what is filled in and send suggestions straight here. It cannot publish anything, invite anyone or see your investors.</p>
+        {fresh && (
+          <div className="notice" style={{ background: "var(--warn-soft)", color: "var(--ink)" }}>
+            <strong>Your connector address. Copy it now; it will not be shown again.</strong>
+            <div className="template" style={{ margin: "8px 0", wordBreak: "break-all", background: "var(--surface)" }}>{fresh}</div>
+            <div className="row">
+              <CopyButton text={fresh} label="Copy address" />
+              <form action={hideConnectorAction}><button className="btn small">I have copied it</button></form>
+            </div>
+            <p className="small" style={{ margin: "8px 0 0" }}>Treat it like a password: anyone with this address can read what is in the room and send suggestions.</p>
+          </div>
+        )}
+        <form action={createConnectorAction} className="inline-form" style={{ maxWidth: 520 }}>
+          <Field label="Which assistant is it for?"><input name="label" maxLength={60} placeholder="e.g. Claude" /></Field>
+          <button className="btn primary">Create a connector address</button>
+        </form>
+        {connectors.length > 0 && (
+          <ul className="quiet-list" style={{ marginTop: 14, maxWidth: 520 }}>
+            {connectors.map((c) => (
+              <li key={c.id} className="spread">
+                <span>{c.label} <span className="muted small">· {c.last_used_at ? `last used ${ago(c.last_used_at)}` : "not used yet"}</span></span>
+                <form action={revokeConnectorAction}><input type="hidden" name="id" value={c.id} /><button className="linkbtn small danger">Turn off</button></form>
+              </li>
+            ))}
+          </ul>
+        )}
+        <details style={{ marginTop: 14 }}>
+          <summary>Where do I put the address?</summary>
+          <p className="muted" style={{ maxWidth: "64ch" }}>In your assistant&apos;s settings, look for <strong>Connectors</strong>, <strong>Apps</strong> or <strong>MCP servers</strong>, choose to add a custom one, and paste the address. If it asks about authentication, choose &ldquo;none&rdquo;: the address itself is the key. Menus differ between assistants and change often, so search your assistant&apos;s help for &ldquo;custom connector&rdquo; or &ldquo;remote MCP server&rdquo; if you cannot find it. Some assistants only offer this on paid plans.</p>
+        </details>
+      </div>
+
+      <div className="card">
+        <h2>2. Give it your documents</h2>
+        <p style={{ maxWidth: "64ch" }}>In a new chat with your assistant, attach whatever you have (pitch deck, certificate of incorporation, stock purchase agreements, cap table, signed SAFEs) and say something like:</p>
+        <div className="template" style={{ maxWidth: 620 }}>Read the attached documents and fill in my data room using the data room connector. Only use what the documents say.</div>
+        <p style={{ marginTop: 8 }}><CopyButton text="Read the attached documents and fill in my data room using the data room connector. Only use what the documents say." label="Copy that message" /></p>
+        <details style={{ marginTop: 6 }}>
+          <summary>My assistant does not support connectors</summary>
+          <p className="muted" style={{ maxWidth: "64ch" }}>Use copy and paste instead. Copy this prompt, paste it into your assistant together with your documents, then paste its whole reply into the box.</p>
+          <p><CopyButton text={prompt} label="Copy the prompt" /></p>
+          <form action={pasteAnswerAction}>
+            <Field label="Paste the assistant's reply here"><textarea name="answer" rows={6} required placeholder={'```json\n{ "company": { … }, "team": [ … ] }\n```'} /></Field>
+            <button className="btn">Show me what it found</button>
+          </form>
+        </details>
+      </div>
+
+      <div className="card">
+        <h2>3. Review, then put the files in the room</h2>
+        <p style={{ maxWidth: "64ch" }}>Suggestions appear at the top of this page for you to tick and apply. Then add the documents themselves under <Link href="/documents">Documents</Link>, so investors can read the originals.</p>
+        <p className="muted small" style={{ maxWidth: "64ch" }}>Your documents go to whichever AI service you choose, under its terms, not through this data room. The data room never sends your files anywhere.</p>
+      </div>
+    </>
+  );
+}

@@ -19,7 +19,10 @@ export default async function StaffHome({ me }: { me: Viewer }) {
   const count = (sql: string, ...p: unknown[]) => q1<{ n: number }>(sql, ...p)?.n ?? 0;
 
   // First-run guide: each step is detected from what is already in the room.
+  const usedAi = count("SELECT COUNT(*) AS n FROM proposals") > 0;
   const setup = [
+    // First, the shortcut: let the founder's own AI read their documents and fill most of the rest.
+    { title: "Let your AI do the setup", help: "Connect the AI assistant you already use, hand it your pitch deck and formation documents, and it fills in most of what follows. You check its work before anything is saved.", href: "/fill", done: usedAi || (getSetting("overview_md").trim().length > 0 && count("SELECT COUNT(*) AS n FROM holders") > 0) },
     { title: "Describe the company", help: "A few paragraphs on the Overview page: what you do, for whom, and why now. This is the first thing every investor reads.", href: "/overview", done: getSetting("overview_md").trim().length > 0 },
     { title: "Upload your deck", help: "Put it in the Pitch folder under Documents. Teaser-level investors see this folder first.", href: "/documents", done: count("SELECT COUNT(*) AS n FROM documents") > 0 },
     { title: "Fill in the cap table", help: "Add founders, any other holders and the option pool. Takes five minutes and powers the SAFE conversion maths.", href: "/captable", done: count("SELECT COUNT(*) AS n FROM holders") > 0 },
