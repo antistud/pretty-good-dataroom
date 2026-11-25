@@ -98,7 +98,10 @@ export function RoundWizard({ ctx }: { ctx: WizardContext }) {
 
   return (
     <div className="wizard">
-      <p className="muted small" aria-live="polite">Step {step + 1} of {STEPS.length} · {STEPS[step]}</p>
+      <p className="muted small spread" aria-live="polite">
+        <span>Step {step + 1} of {STEPS.length} · {STEPS[step]}</span>
+        <Link className="muted" href="/rounds">Leave without saving</Link>
+      </p>
       <div className="progress" style={{ maxWidth: 320, marginBottom: 26 }}><div className="second" style={{ width: `${((step + 1) / STEPS.length) * 100}%`, animation: "none" }} /></div>
 
       {step === 0 && (
@@ -278,7 +281,7 @@ export function RoundWizard({ ctx }: { ctx: WizardContext }) {
               The round is created in planning, invisible to everyone outside. You will get a short readiness list (deck, cap table, company documents), and when that is done you open the round and start adding investors. Every figure here can be changed later.
             </Guide>
           )}
-          <form action={createRoundAction}>
+          <form action={createRoundAction} id="round-form">
             <input type="hidden" name="name" value={a.name} />
             <input type="hidden" name="instrument" value={a.instrument} />
             <input type="hidden" name="target_amount" value={amount || ""} />
@@ -289,22 +292,22 @@ export function RoundWizard({ ctx }: { ctx: WizardContext }) {
             <input type="hidden" name="min_check" value={minCheck} />
             <input type="hidden" name="terms_md" value={terms} />
             <input type="hidden" name="min_level" value={a.audience} />
-            <div className="row">
-              <button type="button" className="btn" onClick={back}>Back</button>
-              <button className="btn primary big" disabled={problems.length > 0}>Create this round</button>
-            </div>
           </form>
           <p className="muted small" style={{ marginTop: 18, maxWidth: "62ch" }}>This guidance describes common practice for early rounds. It is not legal, tax or financial advice. Have a lawyer review the SAFE and any filings before you take money.</p>
         </section>
       )}
 
-      {step < 5 && (
-        <div className="row" style={{ marginTop: 26 }}>
-          {step > 0 && <button type="button" className="btn" onClick={back}>Back</button>}
-          <button type="button" className="btn primary" onClick={next}>Continue</button>
-          <Link className="muted small" href="/rounds" style={{ marginLeft: 8 }}>Leave without saving</Link>
-        </div>
-      )}
+      {/* Where to go next. On a phone this stays pinned to the bottom of the screen. */}
+      <div className="wizard-nav">
+        {step > 0 && <button type="button" className="btn" onClick={back}>Back</button>}
+        {/* Distinct keys matter: without them the Continue button would turn into the
+            submit button mid-click and the browser would submit the form straight away. */}
+        {step < 5 ? (
+          <button key="continue" type="button" className="btn primary" onClick={next}>Continue</button>
+        ) : (
+          <button key="create" type="submit" className="btn primary" form="round-form" disabled={problems.length > 0}>Create this round</button>
+        )}
+      </div>
     </div>
   );
 }

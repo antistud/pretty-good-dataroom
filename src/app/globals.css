@@ -546,3 +546,18 @@ h2 .badge { font-family: var(--sans); margin-left: 6px; }
 .choice span { color: var(--muted); font-size: 14.5px; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 @media screen and (max-width: 800px) { .choices { grid-template-columns: 1fr; } }
+
+.wizard-nav { display: flex; gap: 10px; align-items: center; margin-top: 28px; }
+@media screen and (max-width: 800px) {
+  /* The next step is always under the thumb, just above the tab bar. */
+  .main > .wizard, .wizard section { animation: none; }
+  .wizard { padding-bottom: 84px; }
+  .wizard-nav {
+    position: fixed; left: 0; right: 0; bottom: calc(62px + env(safe-area-inset-bottom)); z-index: 38;
+    margin: 0; padding: 10px 20px;
+    background: color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter: blur(10px);
+    border-top: 1px solid var(--line);
+  }
+  .wizard-nav .btn.primary { flex: 1; }
+  body.menu-open .wizard-nav { display: none; }
+}
