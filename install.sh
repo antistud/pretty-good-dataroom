@@ -87,9 +87,13 @@ DOMAIN="$(grep -E '^DOMAIN=' .env | head -1 | cut -d= -f2-)"
 # ---- 4. Start ----
 say "Starting the data room…"
 IMAGE="$(docker compose config --images 2>/dev/null | grep -m1 dataroom || true)"
-docker compose pull --quiet 2>/dev/null || true
-if [ -n "$IMAGE" ] && docker image inspect "$IMAGE" >/dev/null 2>&1 && [ "${BUILD:-}" != "1" ]; then
-  echo "Using the ready-made image."
+# A ready-made image is published for every version. Ask for the one that
+# matches this exact code, so an update never runs yesterday's build.
+VERSION="$(git rev-parse HEAD)"
+docker compose pull --quiet caddy 2>/dev/null </dev/null || true
+if [ -n "$IMAGE" ] && [ "${BUILD:-}" != "1" ] && docker pull --quiet "${IMAGE%:*}:$VERSION" >/dev/null 2>&1 </dev/null; then
+  docker tag "${IMAGE%:*}:$VERSION" "$IMAGE"
+  echo "Using the ready-made image for this version."
 else
   echo "Building the app on this server (a few minutes)."
   # Building needs memory. Add swap on small servers so it does not get killed.
