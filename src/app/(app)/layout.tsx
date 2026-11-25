@@ -35,15 +35,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       ? [
           { key: "today", label: "Today", items: [{ label: "Today", href: "/home" }, { label: "Founder guide", href: "/guide" }] },
           {
-            key: "investors",
-            label: "Investors",
+            key: "fundraising",
+            label: "Fundraising",
             items: [
-              { label: "Everyone", href: "/pipeline" },
+              { label: "Investors", href: "/pipeline" },
               { label: "Rounds", href: "/rounds" },
               { label: "Requests", href: "/requests" },
               { label: "Introductions", href: "/intros" },
-              { label: "Access", href: "/people" },
-              { label: "Activity", href: "/activity" },
             ],
           },
           {
@@ -59,6 +57,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             ],
           },
           { key: "updates", label: "Updates", items: [{ label: "Updates", href: "/updates" }] },
+          // Everyone who can get in (investors, supporters, your own team) and what they have done.
+          { key: "people", label: "People", items: [{ label: "Access", href: "/people" }, { label: "Activity", href: "/activity" }] },
         ]
       : [
           { key: "home", label: "Home", items: [{ label: "Home", href: "/home" }] },
@@ -95,7 +95,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const stamp = `${company} · Confidential · Prepared for ${me.name} (${me.email}) on ${new Date().toISOString().slice(0, 10)}`;
   const unread = unreadCount(me.id);
-  const ICON: Record<string, Tab["icon"]> = { today: "home", home: "home", investors: "people", room: "doc", documents: "doc", company: "doc", numbers: "doc", updates: "mail", intros: "people" };
+  const ICON: Record<string, Tab["icon"]> = { today: "home", home: "home", fundraising: "people", people: "people", room: "doc", documents: "doc", company: "doc", numbers: "doc", updates: "mail", intros: "people" };
   const tabs: Tab[] = groups.slice(0, 4).map((g) => ({ label: g.label.replace(/^The /, "").replace(/^./, (c) => c.toUpperCase()), href: g.items[0].href, icon: ICON[g.key] ?? "doc", match: g.items.map((i) => i.href) }));
   const initials = me.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   const who = `${me.orgName ? `${me.orgName} · ` : ""}${me.isStaff ? (me.role === "founder" ? "Founder" : "Team") : tierName(me.level)}`;

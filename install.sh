@@ -14,6 +14,7 @@ DIR="${DATAROOM_DIR:-/opt/dataroom}"
 say() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 die() { printf '\n\033[31m%s\033[0m\n' "$*" >&2; exit 1; }
 
+main() {
 [ "$(id -u)" = "0" ] || die "Run this as root (put sudo in front)."
 
 backup() {
@@ -55,8 +56,8 @@ cd "$DIR"
 # ---- 3. Settings (written once, then left alone) ----
 if [ ! -f .env ]; then
   DOMAIN="${1:-${DOMAIN:-}}"
-  if [ -z "$DOMAIN" ] && [ -t 0 ]; then
-    read -rp "The address people will use, e.g. room.example.com: " DOMAIN
+  if [ -z "$DOMAIN" ] && [ -r /dev/tty ]; then
+    read -rp "The address people will use, e.g. room.example.com: " DOMAIN </dev/tty || true
   fi
   DOMAIN="$(printf '%s' "$DOMAIN" | sed -E 's#^https?://##; s#/.*$##' | tr 'A-Z' 'a-z')"
   [[ "$DOMAIN" =~ ^[a-z0-9.-]+\.[a-z]{2,}$ ]] || die "Give the address as the first argument, for example: install.sh room.example.com"
@@ -86,9 +87,13 @@ DOMAIN="$(grep -E '^DOMAIN=' .env | head -1 | cut -d= -f2-)"
 # ---- 4. Start ----
 say "Starting the data room…"
 IMAGE="$(docker compose config --images 2>/dev/null | grep -m1 dataroom || true)"
-docker compose pull --quiet 2>/dev/null || true
-if [ -n "$IMAGE" ] && docker image inspect "$IMAGE" >/dev/null 2>&1 && [ "${BUILD:-}" != "1" ]; then
-  echo "Using the ready-made image."
+# A ready-made image is published for every version. Ask for the one that
+# matches this exact code, so an update never runs yesterday's build.
+VERSION="$(git rev-parse HEAD)"
+docker compose pull --quiet caddy 2>/dev/null </dev/null || true
+if [ -n "$IMAGE" ] && [ "${BUILD:-}" != "1" ] && docker pull --quiet "${IMAGE%:*}:$VERSION" >/dev/null 2>&1 </dev/null; then
+  docker tag "${IMAGE%:*}:$VERSION" "$IMAGE"
+  echo "Using the ready-made image for this version."
 else
   echo "Building the app on this server (a few minutes)."
   # Building needs memory. Add swap on small servers so it does not get killed.
@@ -108,7 +113,7 @@ CRON
 # ---- 6. Wait until it answers ----
 printf "Waiting for it to come up"
 for _ in $(seq 1 40); do
-  if docker compose exec -T dataroom node -e "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))" 2>/dev/null; then OK=1; break; fi
+  if docker compose exec -T dataroom node -e "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))" </dev/null 2>/dev/null; then OK=1; break; fi
   printf "."; sleep 3
 done
 echo
@@ -123,6 +128,13 @@ if [ "${NEW_INSTALL:-}" = "1" ]; then
   echo "  If the page does not load yet, the DNS for $DOMAIN is not pointing here;"
   echo "  the certificate is issued automatically as soon as it does."
 else
-  echo "  Updated to the latest version. Your settings and data were kept."
+  echo "  Up to date. Your settings and data were kept."
+  echo "  Setup token (only needed if you have not created the first account yet):"
+  echo "                $(grep -E '^SETUP_TOKEN=' .env | cut -d= -f2-)"
 fi
 echo "  Settings:     $DIR/.env    Backups: $DIR/backups (nightly)"
+}
+
+# Run only once the whole file has been read. When this script is piped in from
+# curl, a command that reads standard input could otherwise swallow the rest of it.
+main "$@" </dev/null
