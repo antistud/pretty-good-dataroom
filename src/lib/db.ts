@@ -73,6 +73,14 @@ CREATE TABLE IF NOT EXISTS login_codes (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Wrong sign-in codes, kept for a day. Stored (not just counted in memory) so a
+-- restart cannot be used to reset the limit on guessing.
+CREATE TABLE IF NOT EXISTS login_failures (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS login_failures_user ON login_failures(user_id, at);
+
 -- No longer used (passwords were removed); kept so older databases still open.
 CREATE TABLE IF NOT EXISTS password_resets (
   token_hash TEXT PRIMARY KEY,

@@ -225,23 +225,49 @@ export function issueLoginCode(userId: number): string {
   return code;
 }
 
-/** Checks a code. A code works once, expires after ten minutes, and dies after five wrong guesses. */
-export function checkLoginCode(userId: number, code: string): boolean {
+/** Wrong guesses allowed per person per day, across every code and every restart. */
+const DAILY_WRONG_GUESSES = 30;
+
+/**
+ * True when someone has entered too many wrong codes for this account in the
+ * last day. Six digits is a million possibilities; capping guesses at thirty a
+ * day keeps the chance of guessing one negligible however patient the attacker.
+ */
+export function signInPaused(userId: number): boolean {
+  const n = q1<{ n: number }>("SELECT COUNT(*) AS n FROM login_failures WHERE user_id = ? AND at > datetime('now', '-1 day')", userId)?.n ?? 0;
+  return n >= DAILY_WRONG_GUESSES;
+}
+
+/**
+ * Checks a code. A code works once, expires after ten minutes, and dies after
+ * five wrong guesses. Returns "paused" at the moment an account crosses the
+ * daily limit, so the caller can tell its owner.
+ */
+export function checkLoginCode(userId: number, code: string): "ok" | "wrong" | "paused" {
+  if (signInPaused(userId)) return "wrong";
   const row = q1<{ id: number; code_hash: string; attempts: number }>(
     "SELECT id, code_hash, attempts FROM login_codes WHERE user_id = ? AND expires_at > ? ORDER BY id DESC LIMIT 1",
     userId,
     new Date().toISOString(),
   );
-  if (!row) return false;
+  if (!row) return "wrong";
   if (row.attempts >= CODE_ATTEMPTS) {
     run("DELETE FROM login_codes WHERE id = ?", row.id);
-    return false;
+    return "wrong";
   }
   const clean = code.replace(/\D/g, "");
   const ok = clean.length === 6 && crypto.timingSafeEqual(Buffer.from(row.code_hash), Buffer.from(hashCode(userId, clean)));
-  if (ok) run("DELETE FROM login_codes WHERE user_id = ?", userId);
-  else run("UPDATE login_codes SET attempts = attempts + 1 WHERE id = ?", row.id);
-  return ok;
+  if (ok) {
+    run("DELETE FROM login_codes WHERE user_id = ?", userId);
+    return "ok";
+  }
+  run("UPDATE login_codes SET attempts = attempts + 1 WHERE id = ?", row.id);
+  run("INSERT INTO login_failures (user_id) VALUES (?)", userId);
+  if (signInPaused(userId)) {
+    run("DELETE FROM login_codes WHERE user_id = ?", userId);
+    return "paused";
+  }
+  return "wrong";
 }
 
 /** Remembers, for ten minutes, which email is part-way through signing in on this browser. */

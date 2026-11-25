@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { q1, run, isSetUp, setSetting, getSetting } from "@/lib/db";
 import {
   checkLoginCode, clearPendingEmail, clientIp, completeTwofa, createSession, destroySession, issueLoginCode,
-  pendingEmail, pendingTwofaUserId, rateLimited, requireUser, sameSecret, setPendingEmail,
+  pendingEmail, pendingTwofaUserId, rateLimited, requireUser, sameSecret, setPendingEmail, signInPaused,
 } from "@/lib/auth";
 import { verifyTotp } from "@/lib/totp";
 import { findInvite } from "@/lib/invites";
@@ -44,10 +44,12 @@ export async function requestCodeAction(form: FormData) {
     flash("/login", "Too many codes requested. Wait 15 minutes and try again.", "error");
   }
   const user = q1<{ id: number; name: string; disabled: number }>("SELECT id, name, disabled FROM users WHERE email = ?", email);
-  if (user && !user.disabled) {
+  if (user && !user.disabled && !signInPaused(user.id)) {
     const code = issueLoginCode(user.id);
     const company = getSetting("company_name");
-    await sendMail(
+    // Deliberately not awaited: waiting for the mail server here would make the page slower for
+    // real accounts than for unknown addresses, which would reveal who has access.
+    void sendMail(
       email,
       `${code} is your ${company} sign-in code`,
       `<p>Hi ${escapeHtml(user.name.split(/\s+/)[0])},</p><p>Your sign-in code is</p><p style="font:600 30px/1.2 ui-monospace,Menlo,monospace;letter-spacing:0.18em;margin:6px 0 14px">${code}</p><p>It works once and expires in ten minutes. If you did not ask for it, you can ignore this email; nobody can sign in without the code.</p>`,
@@ -67,7 +69,20 @@ export async function verifyCodeAction(form: FormData) {
     flash("/login", "Too many attempts. Wait 15 minutes and try again.", "error");
   }
   const user = q1<{ id: number; totp_enabled: number; disabled: number; org_id: number | null }>("SELECT id, totp_enabled, disabled, org_id FROM users WHERE email = ?", email);
-  if (!user || user.disabled || !checkLoginCode(user.id, String(form.get("code") ?? ""))) {
+  const outcome = user && !user.disabled ? checkLoginCode(user.id, String(form.get("code") ?? "")) : "wrong";
+  if (outcome === "paused") {
+    // Tell the real owner, by email, that someone has been guessing. The screen itself says nothing different.
+    const who = q1<{ name: string }>("SELECT name FROM users WHERE id = ?", user!.id);
+    logActivity({ id: user!.id, orgId: user!.org_id }, "login.paused", undefined, undefined, "too many wrong sign-in codes");
+    void sendMail(
+      email!,
+      `Sign-in to ${getSetting("company_name")} is paused for 24 hours`,
+      `<p>Hi ${escapeHtml((who?.name ?? "").split(/\s+/)[0])},</p><p>Someone entered the wrong sign-in code for your account many times today, so sign-in for this email is paused for 24 hours. Nobody got in.</p><p>If that was you, try again tomorrow. If you need access sooner, ask the person who runs the data room. If it was not you, there is nothing you need to do.</p>`,
+      undefined,
+      { transactional: true },
+    );
+  }
+  if (outcome !== "ok") {
     flash("/login/code", "That code is not right, or it has expired. Check the newest email, or ask for a new code.", "error");
   }
   await clearPendingEmail();

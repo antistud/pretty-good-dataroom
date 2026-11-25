@@ -190,6 +190,7 @@ async function staffDigest(now: Date) {
 function housekeeping(now: Date) {
   run("DELETE FROM sessions WHERE expires_at <= ?", now.toISOString());
   run("DELETE FROM login_codes WHERE expires_at <= ?", now.toISOString());
+  run("DELETE FROM login_failures WHERE at < datetime('now', '-2 days')");
   // Daily digest keys are only needed for the day they cover.
   run("DELETE FROM sent_log WHERE (key LIKE 'docs:%' OR key LIKE 'staffdigest:%') AND sent_at < ?", sqlTime(new Date(now.getTime() - 7 * 86400_000)));
 }

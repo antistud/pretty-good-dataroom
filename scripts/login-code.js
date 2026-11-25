@@ -26,6 +26,8 @@ if (user.disabled) {
 const code = String(crypto.randomInt(0, 1000000)).padStart(6, "0");
 // Must match hashCode() in src/lib/auth.ts.
 const hash = crypto.createHash("sha256").update(`${user.id}:${code}`).digest("hex");
+// Issuing a code on the server also lifts any pause caused by wrong guesses.
+db.prepare("DELETE FROM login_failures WHERE user_id = ?").run(user.id);
 db.prepare("DELETE FROM login_codes WHERE user_id = ?").run(user.id);
 db.prepare("INSERT INTO login_codes (user_id, code_hash, expires_at) VALUES (?,?,?)").run(user.id, hash, new Date(Date.now() + 10 * 60000).toISOString());
 db.prepare("INSERT INTO activity (user_id, action, detail) VALUES (?, 'login.code_from_server', ?)").run(user.id, "issued on the server");

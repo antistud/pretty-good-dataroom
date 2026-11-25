@@ -21,7 +21,9 @@ an attacker could do with it. You will get a reply there.
   sites.
 - **No passwords.** People sign in with a six-digit code sent to their email.
   A code works once, expires after ten minutes, is replaced when a new one is
-  requested and dies after five wrong guesses; only a hash is stored. Requests
+  requested and dies after five wrong guesses; only a hash is stored. An
+  account that collects thirty wrong guesses in a day has sign-in paused for
+  24 hours and its owner is emailed; the count survives restarts. Requests
   and attempts are rate limited, and the sign-in screen answers the same way
   whether or not an email has access. An authenticator-app code (TOTP) can be
   added as a second step. "Sign out everywhere else" ends other sessions.
