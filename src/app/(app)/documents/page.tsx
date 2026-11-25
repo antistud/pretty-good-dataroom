@@ -5,6 +5,7 @@ import { visibleDocuments, visibleFolders, type FolderRow } from "@/lib/docs";
 import { logView } from "@/lib/activity";
 import { fileSize, fmtDate, levelName } from "@/lib/format";
 import { Field, Flash, Hint, LevelSelect, PageHead } from "@/components/ui";
+import { Icon } from "@/components/Icon";
 import { MissingDocs } from "@/components/MissingDocs";
 import { createFolderAction, deleteFolderAction, updateFolderAction, uploadDocumentAction } from "./actions";
 
@@ -36,7 +37,7 @@ export default async function Documents({ searchParams }: { searchParams: Promis
           href={`/documents?folder=${f.id}`}
           style={{ display: "block", padding: "6px 8px", paddingLeft: 8 + depth * 16, borderRadius: 7, color: "var(--ink)", background: current?.id === f.id ? "var(--soft)" : undefined, fontWeight: current?.id === f.id ? 600 : 400 }}
         >
-          {f.name} <span className="muted small">{count(f.id)}</span>
+          <Icon name="folder" size={16} /> {f.name} <span className="muted small">{count(f.id)}</span>
         </Link>
         {tree(folders.filter((c) => c.parent_id === f.id), depth + 1)}
       </div>
@@ -44,16 +45,12 @@ export default async function Documents({ searchParams }: { searchParams: Promis
 
   return (
     <>
-      <PageHead title="Documents" sub={me.isStaff ? "Everything investors can open, organised by folder." : "The company's documents, organised by folder."}><ExportBar print={false} links={me.canDownload ? [{ href: "/api/export/documents.zip", label: "Download everything (zip)" }] : []} /></PageHead>
+      <PageHead title="Documents" sub={me.isStaff ? "Everything investors can open." : "The company's documents."}><ExportBar print={false} links={me.canDownload ? [{ href: "/api/export/documents.zip", label: "Download everything (zip)" }] : []} /></PageHead>
       <Flash sp={sp} />
       {me.isStaff ? (
-        <Hint title="How this works">
-          Pick a folder on the left, then upload into it. Each folder and each document has a &ldquo;who can see this&rdquo; setting; a document is only shown to people who are allowed to see both it and its folder. Investors see PDFs stamped with their own email address.
-        </Hint>
+        <Hint title="How this works">Pick a folder, then upload into it. A document is shown only to people allowed to see both it and its folder. Investors see PDFs stamped with their own email.</Hint>
       ) : (
-        <Hint title="What to do here">
-          Pick a folder on the left and click a document to read it in your browser. If you are new, start with the first folder. Each page you open is marked with your email address, and the founders can see what you have viewed. Missing something? Use &ldquo;Ask or request&rdquo; in the menu.
-        </Hint>
+        <Hint title="What to do here">Pick a folder and click a document to read it. Each page is marked with your email, and the founders can see what you have viewed.</Hint>
       )}
 
       {me.isStaff && <MissingDocs back="/documents" />}
@@ -89,7 +86,7 @@ export default async function Documents({ searchParams }: { searchParams: Promis
                         {here.map((d) => (
                           <tr key={d.id}>
                             <td>
-                              <Link href={`/documents/${d.id}`}><strong>{d.name}</strong></Link>
+                              <Link href={`/documents/${d.id}`} className="with-icon"><Icon name="file" size={16} /><strong>{d.name}</strong></Link>
                               {d.description && <div className="muted small">{d.description}</div>}
                             </td>
                             <td className="small muted nowrap">{d.filename ? `${(d.filename.split(".").pop() ?? "").toUpperCase()} · ${fileSize(d.size ?? 0)}` : "—"}</td>

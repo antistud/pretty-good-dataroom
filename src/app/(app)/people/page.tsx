@@ -44,7 +44,7 @@ export default async function People({ searchParams }: { searchParams: Promise<R
 
   return (
     <>
-      <PageHead title="People & access" sub="Access belongs to the organisation. Everyone at a firm sees the same things, and a firm's own members can invite their colleagues." />
+      <PageHead title="People & access" sub="Access belongs to the firm. Members can invite their own colleagues." />
       <Flash sp={await searchParams} />
 
       <div className="grid2">

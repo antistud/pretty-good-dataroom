@@ -37,7 +37,7 @@ export function MissingDocs({ back, heading = "Still to upload" }: { back: strin
       ) : (
         <>
           <p className="muted" style={{ maxWidth: "66ch", marginTop: -4 }}>
-            The room mentions {all.length === 1 ? "something" : "things"} an investor will ask to see the paper for. {all.length === 1 ? "This is" : "These are"} not uploaded yet, as far as we can tell from the file names.
+            An investor will ask for {all.length === 1 ? "this" : "these"}. Not uploaded yet, going by file names.
           </p>
           <ul className="missing-list">{all.slice(0, FIRST).map(item)}</ul>
           {all.length > FIRST && (
@@ -46,7 +46,7 @@ export function MissingDocs({ back, heading = "Still to upload" }: { back: strin
               <ul className="missing-list">{all.slice(FIRST).map(item)}</ul>
             </details>
           )}
-          <p className="muted small" style={{ maxWidth: "66ch" }}>Already uploaded under a different name? Mark it not needed. This is a prompt based on common pre-seed diligence, not legal advice; your lawyer knows what your company actually needs.</p>
+          <p className="muted small" style={{ maxWidth: "66ch" }}>Uploaded under another name? Mark it not needed. A prompt, not legal advice.</p>
         </>
       )}
       {hidden > 0 && (

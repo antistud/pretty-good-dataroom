@@ -14,7 +14,7 @@ export default async function Rounds({ searchParams }: { searchParams: Promise<R
   const rounds = q<RoundRow>("SELECT * FROM rounds ORDER BY CASE status WHEN 'open' THEN 0 WHEN 'closing' THEN 1 WHEN 'planning' THEN 2 ELSE 3 END, id DESC");
   return (
     <>
-      <PageHead title="Rounds" sub="Each raise is its own round: the one you are doing now, and the ones you are planning." />
+      <PageHead title="Rounds" sub="The raise you are doing now, and the ones you are planning." />
       <Flash sp={await searchParams} />
       <Hint title="How rounds work">
         A round moves through four steps. <strong>Planning</strong>: get ready, nobody outside sees it. <strong>Open</strong>: investors with access see the terms. <strong>Closing</strong>: collecting signatures and wires. <strong>Closed</strong>: done. Each round has a checklist that tells you what to do next.

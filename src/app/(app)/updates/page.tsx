@@ -20,7 +20,7 @@ export default async function Updates({ searchParams }: { searchParams: Promise<
     );
     return (
       <>
-        <PageHead title="Updates" sub="A short note from the founders every month: what went well, what did not, and where you can help." />
+        <PageHead title="Updates" sub="A short note from the founders every month." />
         <Flash sp={sp} />
         <Hint title="What to do here">Open the newest update first. At the bottom of each one is a short list of people the founders would like to meet. If you know one of them, that is the most useful thing you can do.</Hint>
         {updates.length === 0 ? (
@@ -53,7 +53,7 @@ export default async function Updates({ searchParams }: { searchParams: Promise<
 
   return (
     <>
-      <PageHead title="Investor updates" sub="One update a month. You write it once; each reader gets only the sections their access allows." />
+      <PageHead title="Investor updates" sub="One a month. Each reader gets only the sections their access allows." />
       <Flash sp={sp} />
 
       <div className="card">

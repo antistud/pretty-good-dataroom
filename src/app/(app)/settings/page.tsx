@@ -50,7 +50,7 @@ export default async function Settings({ searchParams }: { searchParams: Promise
 
   return (
     <>
-      <PageHead title="Settings" sub="Only founders can see and change this page. Every change is recorded in the activity log." />
+      <PageHead title="Settings" sub="Founders only. Every change is logged." />
       <Flash sp={await searchParams} />
 
       <div className="grid2">

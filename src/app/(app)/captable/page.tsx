@@ -1,3 +1,5 @@
+import { OwnerLegend, SplitBar, StageBars, VestBar, byGroup } from "@/components/charts";
+import { Icon } from "@/components/Icon";
 import { ExportBar } from "@/components/Export";
 import Link from "next/link";
 import { requireSection } from "@/lib/auth";
@@ -134,7 +136,7 @@ export default async function CapTable({ searchParams }: { searchParams: Promise
 
   return (
     <>
-      <PageHead title="Cap table & SAFEs" sub="Who owns the company today, what has been sold on SAFEs, and what it looks like after a priced round."><ExportBar links={me.canDownload ? [{ href: "/api/export/cap-table.csv", label: "Cap table (CSV)" }, { href: "/api/export/safes.csv", label: "SAFEs (CSV)" }] : []} /></PageHead>
+      <PageHead title="Cap table & SAFEs" sub="Who owns what today, and after a priced round."><ExportBar links={me.canDownload ? [{ href: "/api/export/cap-table.csv", label: "Cap table (CSV)" }, { href: "/api/export/safes.csv", label: "SAFEs (CSV)" }] : []} /></PageHead>
       <Flash sp={sp} />
       {me.isStaff ? (
         <Hint title="Keep this page true">
@@ -147,13 +149,19 @@ export default async function CapTable({ searchParams }: { searchParams: Promise
       )}
 
       <div className="grid3">
-        <div className="card"><div className="stat">{num(totalShares)}</div><div className="stat-label">Fully diluted shares today</div></div>
-        <div className="card"><div className="stat">{money(safeTotal)}</div><div className="stat-label">Raised on {safes.length} SAFE{safes.length === 1 ? "" : "s"}</div></div>
-        <div className="card"><div className="stat">{pct(sold, 1)}</div><div className="stat-label">Ownership sold on post-money SAFEs so far</div></div>
+        <div className="card"><div className="stat-row"><span className="icon-chip"><Icon name="pie" /></span><div><div className="stat">{num(totalShares)}</div><div className="stat-label">Fully diluted shares</div></div></div></div>
+        <div className="card"><div className="stat-row"><span className="icon-chip"><Icon name="coins" /></span><div><div className="stat">{money(safeTotal)}</div><div className="stat-label">Raised on {safes.length} SAFE{safes.length === 1 ? "" : "s"}</div></div></div></div>
+        <div className="card"><div className="stat-row"><span className="icon-chip"><Icon name="trend" /></span><div><div className="stat">{pct(sold, 1)}</div><div className="stat-label">Sold on SAFEs so far</div></div></div></div>
       </div>
 
       <div className="card">
         <h2>Ownership today</h2>
+        {holders.length > 0 && (
+          <>
+            <SplitBar shares={byGroup(holders.map((h) => ({ kind: h.kind, value: h.shares })))} label="Ownership today" />
+            <OwnerLegend groups={byGroup(holders.map((h) => ({ kind: h.kind, value: h.shares }))).map((x) => x.group)} />
+          </>
+        )}
         {holders.length === 0 ? (
           <div className="empty">{me.isStaff ? "No shareholders yet. Add the founders below." : "The founders have not filled this in yet."}</div>
         ) : (
@@ -165,6 +173,7 @@ export default async function CapTable({ searchParams }: { searchParams: Promise
                   <tr key={h.id}>
                     <td>
                       {h.name}{h.left && <span className="badge grey" style={{ marginLeft: 8 }}>Left {fmtDate(h.end_date)}</span>}
+                      {h.vests && <VestBar vested={h.vested} granted={h.granted} left={h.left} />}
                       {vestingLine(h) && <div className="muted small">{vestingLine(h)}</div>}
                       {h.notes && <div className="muted small">{h.notes}</div>}
                     </td>
@@ -262,7 +271,7 @@ export default async function CapTable({ searchParams }: { searchParams: Promise
 
       <div className="card" id="proforma">
         <h2>What a priced round would look like</h2>
-        <p className="muted">Type the terms of a future round to see how the SAFEs convert and where everyone ends up. Nothing here is saved.</p>
+        <p className="muted">Try the terms of a future round. Nothing here is saved.</p>
         <form method="get" action="/captable#proforma" className="inline-form" style={{ marginBottom: 16 }}>
           <Field label="Pre-money valuation ($)"><input name="pre" inputMode="decimal" defaultValue={pre} /></Field>
           <Field label="New money raised ($)"><input name="money" inputMode="decimal" defaultValue={newMoney} /></Field>
@@ -276,6 +285,13 @@ export default async function CapTable({ searchParams }: { searchParams: Promise
         ) : (
           <>
             <ProFormaStats c={sim} />
+            <StageBars
+              stages={[
+                { label: "Today", shares: byGroup(sim.rows.map((r) => ({ kind: r.kind, value: r.before.shares }))) },
+                ...(sim.safes.length ? [{ label: "After SAFEs convert", shares: byGroup(sim.rows.map((r) => ({ kind: r.kind, value: r.afterSafes.shares }))) }] : []),
+                { label: "After the round", shares: byGroup(sim.rows.map((r) => ({ kind: r.kind, value: r.afterRound.shares }))) },
+              ]}
+            />
             <ProFormaTable c={sim} />
             {sim.safes.length > 0 && (
               <>

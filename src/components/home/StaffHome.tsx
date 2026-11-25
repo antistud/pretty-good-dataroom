@@ -9,6 +9,7 @@ import { Welcome } from "@/components/Path";
 import { Greeting } from "@/components/Greeting";
 import { roomHealth } from "@/lib/health";
 import { roomIsEmpty, sampleLoaded } from "@/lib/sample";
+import { Ring } from "@/components/charts";
 import { missingDocuments } from "@/lib/missing-room";
 import { clearSampleAction, loadSampleAction } from "@/app/(app)/home/actions";
 import { SEASONS, currentSeason, noteOfTheDay } from "@/lib/mentor";
@@ -23,13 +24,13 @@ export default async function StaffHome({ me }: { me: Viewer }) {
   const usedAi = count("SELECT COUNT(*) AS n FROM proposals") > 0;
   const setup = [
     // First, the shortcut: let the founder's own AI read their documents and fill most of the rest.
-    { title: "Let your AI do the setup", help: "Connect the AI assistant you already use, hand it your pitch deck and formation documents, and it fills in most of what follows. You check its work before anything is saved.", href: "/fill", done: usedAi || (getSetting("overview_md").trim().length > 0 && count("SELECT COUNT(*) AS n FROM holders") > 0) },
-    { title: "Describe the company", help: "A few paragraphs on the Overview page: what you do, for whom, and why now. This is the first thing every investor reads.", href: "/overview", done: getSetting("overview_md").trim().length > 0 },
-    { title: "Upload your deck", help: "Put it in the Pitch folder under Documents. Teaser-level investors see this folder first.", href: "/documents", done: count("SELECT COUNT(*) AS n FROM documents") > 0 },
-    { title: "Fill in the cap table", help: "Add founders, any other holders and the option pool. Takes five minutes and powers the SAFE conversion maths.", href: "/captable", done: count("SELECT COUNT(*) AS n FROM holders") > 0 },
-    { title: "Create your round", help: "Target amount, SAFE cap and discount. Commitments in the pipeline attach to these terms.", href: "/rounds/new", done: count("SELECT COUNT(*) AS n FROM rounds") > 0 },
-    { title: "Add your first lead", help: "Anyone you might raise from. Their card then walks you through every step to a wire.", href: "/pipeline", done: count("SELECT COUNT(*) AS n FROM leads") > 0 },
-    { title: "Write your first investor update", help: "A short monthly note. Investors who hear from you regularly are the ones who help.", href: "/updates", done: count("SELECT COUNT(*) AS n FROM updates") > 0 },
+    { title: "Let your AI do the setup", help: "Hand your deck and formation documents to your AI assistant and it fills in most of what follows. You check its work.", href: "/fill", done: usedAi || (getSetting("overview_md").trim().length > 0 && count("SELECT COUNT(*) AS n FROM holders") > 0) },
+    { title: "Describe the company", help: "What you do, for whom, and why now. Every investor reads this first.", href: "/overview", done: getSetting("overview_md").trim().length > 0 },
+    { title: "Upload your deck", help: "Put it in the Pitch folder under Documents.", href: "/documents", done: count("SELECT COUNT(*) AS n FROM documents") > 0 },
+    { title: "Fill in the cap table", help: "Founders, other holders and the option pool. Five minutes.", href: "/captable", done: count("SELECT COUNT(*) AS n FROM holders") > 0 },
+    { title: "Create your round", help: "Amount, cap and discount. The planner walks you through it.", href: "/rounds/new", done: count("SELECT COUNT(*) AS n FROM rounds") > 0 },
+    { title: "Add your first lead", help: "Anyone you might raise from. Their card walks you to a wire.", href: "/pipeline", done: count("SELECT COUNT(*) AS n FROM leads") > 0 },
+    { title: "Write your first investor update", help: "A short monthly note keeps investors close.", href: "/updates", done: count("SELECT COUNT(*) AS n FROM updates") > 0 },
   ];
   const setupLeft = setup.filter((s) => !s.done).length;
   const nextSetup = setup.find((s) => !s.done);
@@ -121,7 +122,7 @@ export default async function StaffHome({ me }: { me: Viewer }) {
 
       {isSample && (
         <div className="notice warn spread">
-          <span>This is a made-up company, here so you can look around. Clear it before you invite anyone real.</span>
+          <span>A made-up company, so you can look around. Clear it before inviting anyone.</span>
           {me.role === "founder" && <form action={clearSampleAction}><button className="btn small">Clear it and start for real</button></form>}
         </div>
       )}
@@ -150,7 +151,7 @@ export default async function StaffHome({ me }: { me: Viewer }) {
             ? "Nothing is waiting on you today. A good day to reach out to someone new, or to rest."
             : items.length === 1
               ? "Just one thing needs you today:"
-              : `${words(Math.min(items.length, 5))} things need you today. Take them in order; one at a time is plenty.`}
+              : `${words(Math.min(items.length, 5))} things need you today.`}
         </p>
       </div>
 
@@ -163,7 +164,7 @@ export default async function StaffHome({ me }: { me: Viewer }) {
           </ol>
           {moreItems.length > 0 && (
             <details style={{ marginBottom: 20 }}>
-              <summary>and {moreItems.length} more, whenever you are ready</summary>
+              <summary>and {moreItems.length} more</summary>
               <ul className="quiet-list">
                 {moreItems.map((it, i) => <li key={i}>{it.text} <Link href={it.href}>{it.cta}</Link></li>)}
               </ul>
@@ -231,17 +232,19 @@ export default async function StaffHome({ me }: { me: Viewer }) {
       </blockquote>
 
       {setupLeft === 0 && toStrengthen.length > 0 && (
-        <p className="muted" style={{ maxWidth: "70ch" }}>
-          The room is about {health.score}% of the way to everything an investor expects. The quickest things to add:{" "}
-          {toStrengthen.map((i, n) => <span key={i.title}>{n > 0 ? ", " : ""}<Link href={i.href}>{i.title.toLowerCase()}</Link></span>)}.
-          {health.streak > 1 ? ` You have sent ${health.streak} monthly updates in a row.` : ""}
-        </p>
+        <div className="row" style={{ gap: 16, flexWrap: "nowrap", alignItems: "center", maxWidth: "70ch" }}>
+          <Ring value={health.score / 100} label="Room readiness" />
+          <p className="muted" style={{ margin: 0 }}>
+            Room readiness. Next: {toStrengthen.map((i, n) => <span key={i.title}>{n > 0 ? ", " : ""}<Link href={i.href}>{i.title.toLowerCase()}</Link></span>)}.
+            {health.streak > 1 ? ` ${health.streak} monthly updates in a row.` : ""}
+          </p>
+        </div>
       )}
 
       <div className="grid2">
         <div className="card">
           <h2>Coming up</h2>
-          {upcoming.length === 0 ? <p className="muted">Nothing scheduled. Setting a next step on each investor keeps anyone from going quiet.</p> : (
+          {upcoming.length === 0 ? <p className="muted">Nothing scheduled. Set a next step on each investor.</p> : (
             <ul className="quiet-list">
               {upcoming.map((l) => (
                 <li key={l.id}><Link href={`/pipeline/${l.id}`}>{l.org_name}</Link>: {l.next_action} <span className="muted small">· {humanDay(l.next_action_due)}</span></li>
@@ -251,7 +254,7 @@ export default async function StaffHome({ me }: { me: Viewer }) {
         </div>
         <div className="card">
           <h2>Lately in the room</h2>
-          {recent.length === 0 ? <p className="muted">Quiet so far. When investors and supporters sign in, you will see what they read here.</p> : (
+          {recent.length === 0 ? <p className="muted">Quiet so far. What investors read shows up here.</p> : (
             <>
               <ul className="quiet-list">
                 {recent.slice(0, 6).map((r) => <li key={r.id}>{r.who} {r.what} <span className="muted small">· {ago(r.created_at)}</span></li>)}

@@ -5,6 +5,7 @@ import { money, tierName } from "@/lib/format";
 import { currentRound } from "@/lib/rounds";
 import { STAGES, humanDay, today, type Lead } from "@/lib/pipeline";
 import { Field, Flash, Hint, PageHead } from "@/components/ui";
+import { Funnel } from "@/components/charts";
 import { Board } from "@/components/Board";
 import { addLeadAction } from "./actions";
 
@@ -35,7 +36,7 @@ export default async function Pipeline({ searchParams }: { searchParams: Promise
 
   return (
     <>
-      <PageHead title="Investors" sub="Every investor you are talking to, and the one thing to do next for each.">
+      <PageHead title="Investors" sub="Everyone you are talking to, and what to do next.">
         {rounds.length > 0 && (
           <form className="row" method="get">
             <select name="round" defaultValue={String(selected)} style={{ width: "auto" }}>
@@ -48,16 +49,25 @@ export default async function Pipeline({ searchParams }: { searchParams: Promise
       </PageHead>
       <Flash sp={sp} />
       <Hint title="How this works">
-        Add anyone you might raise from as a lead. Open their card and it tells you exactly what to do next, with one button for each step:
-        reach out, invite them to the room, meet, open diligence, record the commitment, get the SAFE signed, confirm the wire.
-        Moving a card forward raises that firm&apos;s data room access automatically, so you never have to manage permissions by hand.
-        {rounds.length === 0 && <> You have no round yet: <Link href="/rounds">create one</Link> so commitments have terms to attach to.</>}
+        Add anyone you might raise from. Their card tells you the next step. Moving a card forward raises that firm&apos;s access automatically.
+        {rounds.length === 0 && <> You have no round yet: <Link href="/rounds">create one</Link>.</>}
       </Hint>
 
       {leads.length > 0 && (
         <p className="letter" style={{ marginBottom: 22 }}>
           <strong>{money(open, true)}</strong> is in conversation, <strong>{money(committed, true)}</strong> is committed{wired > 0 ? <>, and {money(wired, true)} of that is in the bank</> : null}.
         </p>
+      )}
+
+      {leads.length >= 3 && (
+        <Funnel
+          unit="Investors"
+          rows={columns.map((c) => {
+            const here = leads.filter((l) => l.stage === c.key);
+            const sum = here.reduce((n, l) => n + (l.check_size ?? 0), 0);
+            return { label: c.label, count: here.length, note: sum > 0 ? money(sum, true) : undefined };
+          })}
+        />
       )}
 
       <Board

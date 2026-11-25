@@ -113,7 +113,7 @@ export default async function Requests({ searchParams }: { searchParams: Promise
 
   return (
     <>
-      <PageHead title="Requests" sub="Everything investors have asked for. Answer fast: response time is one of the things they are judging.">
+      <PageHead title="Requests" sub="What investors have asked for. Fast answers count.">
         {orgs.length > 0 && (
           <form className="row" action="/requests">
             <select name="org" defaultValue={String(orgFilter)} style={{ width: "auto" }}>

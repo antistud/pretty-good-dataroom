@@ -124,7 +124,7 @@ export default async function Intros({ searchParams }: { searchParams: Promise<R
 
   return (
     <>
-      <PageHead title="Set Me Up" sub="Tell your investors and supporters exactly who you want to meet, and track the introductions they offer." />
+      <PageHead title="Set Me Up" sub="Who you want to meet, and the introductions offered." />
       <Flash sp={sp} />
       <Hint title="How to use this">
         Keep three to five specific asks open at a time. Each one appears on this page for the audience you choose and in every update email.

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Columns } from "@/components/charts";
 import { requireStaff } from "@/lib/auth";
 import { q } from "@/lib/db";
 import { ago, fmtDateTime, tierName } from "@/lib/format";
@@ -46,6 +47,14 @@ export default async function Activity({ searchParams }: { searchParams: Promise
     ...(orgId ? [orgId] : []),
   );
 
+  // Views by investors and supporters on each of the last 14 days, including the days with none.
+  const perDay = new Map(q<{ d: string; n: number }>("SELECT date(created_at) AS d, COUNT(*) AS n FROM activity WHERE action IN ('doc.view','section.view','update.view','page.view') AND created_at >= date('now', '-13 days') GROUP BY d").map((r) => [r.d, r.n]));
+  const days = Array.from({ length: 14 }, (_, i) => {
+    const d = new Date(Date.now() - (13 - i) * 86400_000).toISOString().slice(0, 10);
+    return { label: new Date(d + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }), value: perDay.get(d) ?? 0 };
+  });
+  const viewsTotal = days.reduce((n, d) => n + d.value, 0);
+
   const names = (table: string, col: string) => new Map(q<{ id: number; n: string }>(`SELECT id, ${col} AS n FROM ${table}`).map((r) => [r.id, r.n]));
   const docs = names("documents", "name");
   const updates = names("updates", "title");
@@ -92,10 +101,16 @@ export default async function Activity({ searchParams }: { searchParams: Promise
 
   return (
     <>
-      <PageHead title="Activity" sub="Who has looked at what, and every change made on the company side." />
-      <Hint title="How to read this">
-        The table shows how engaged each firm is. A firm that has opened many documents and keeps coming back is worth a follow-up; one that has not signed in may need a nudge. Click a firm to see only its activity. Your own team&rsquo;s page views are not recorded, only its changes.
-      </Hint>
+      <PageHead title="Activity" sub="Who has looked at what, and what changed." />
+      <Hint title="How to read this">A firm that opens many documents and keeps coming back is worth a follow-up. Click a firm to see only its activity. Your own team&rsquo;s page views are not recorded.</Hint>
+
+      {viewsTotal > 0 && (
+        <div className="card">
+          <div className="spread"><h2 style={{ margin: 0 }}>Last 14 days</h2><span className="muted small">{viewsTotal} view{viewsTotal === 1 ? "" : "s"} by investors and supporters</span></div>
+          <div style={{ marginTop: 14 }}><Columns rows={days} label="Views per day" /></div>
+          <div className="spread muted small" style={{ marginTop: 6 }}><span>{days[0].label}</span><span>today</span></div>
+        </div>
+      )}
 
       <div className="card">
         <h2>By firm</h2>

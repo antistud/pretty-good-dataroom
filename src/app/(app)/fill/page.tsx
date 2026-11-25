@@ -33,7 +33,7 @@ export default async function Fill({ searchParams }: { searchParams: Promise<Rec
 
   return (
     <>
-      <PageHead title="Let your AI do the setup" sub="Hand your pitch deck, formation documents and SAFEs to the AI assistant you already use. It reads them and suggests what goes in the room. You check its work before anything is saved." />
+      <PageHead title="Let your AI do the setup" sub="Hand your deck, formation documents and SAFEs to your own AI assistant. It suggests what goes in the room; you check before anything is saved." />
       <Flash sp={await searchParams} />
 
       {proposals.length > 0 && (
@@ -116,7 +116,7 @@ export default async function Fill({ searchParams }: { searchParams: Promise<Rec
 
       <div className="card">
         <h2>1. Connect your assistant</h2>
-        <p style={{ maxWidth: "64ch" }}>Give Claude, ChatGPT, Grok or any assistant that supports connectors (MCP) a private key to this room. It can then send suggestions straight here. It cannot publish anything, invite anyone or see your investors, and unless you tick the box below it cannot read anything either.</p>
+        <p style={{ maxWidth: "64ch" }}>Give Claude, ChatGPT, Grok or any MCP assistant a private key to this room. It can only send suggestions, and cannot read anything unless you tick the box below.</p>
         {fresh && (
           <div className="notice" style={{ background: "var(--warn-soft)", color: "var(--ink)" }}>
             <strong>Your connector address. Copy it now; it will not be shown again.</strong>
@@ -167,7 +167,7 @@ export default async function Fill({ searchParams }: { searchParams: Promise<Rec
 
       <div className="card">
         <h2>2. Give it your documents</h2>
-        <p style={{ maxWidth: "64ch" }}>In a new chat with your assistant, attach whatever you have (pitch deck, certificate of incorporation, stock purchase agreements, cap table, signed SAFEs) and say something like:</p>
+        <p style={{ maxWidth: "64ch" }}>In a new chat, attach what you have (deck, certificate of incorporation, stock agreements, signed SAFEs) and say:</p>
         <div className="template" style={{ maxWidth: 620 }}>Read the attached documents and fill in my data room using the data room connector. Only use what the documents say.</div>
         <p style={{ marginTop: 8 }}><CopyButton text="Read the attached documents and fill in my data room using the data room connector. Only use what the documents say." label="Copy that message" /></p>
         <details style={{ marginTop: 6 }}>
@@ -183,8 +183,8 @@ export default async function Fill({ searchParams }: { searchParams: Promise<Rec
 
       <div className="card">
         <h2>3. Review, then put the files in the room</h2>
-        <p style={{ maxWidth: "64ch" }}>Suggestions appear at the top of this page for you to tick and apply. Your assistant read the documents, but the room does not have them yet: add the files themselves under <Link href="/documents">Documents</Link>, so investors can read the originals. Once details are applied, the list below tells you which ones are still missing.</p>
-        <p className="muted small" style={{ maxWidth: "64ch" }}>Your documents go to whichever AI service you choose, under its terms, not through this data room. The data room never sends your files anywhere.</p>
+        <p style={{ maxWidth: "64ch" }}>Tick and apply the suggestions at the top of this page. Then upload the files themselves under <Link href="/documents">Documents</Link>; the list below shows what is still missing.</p>
+        <p className="muted small" style={{ maxWidth: "64ch" }}>Your documents go to the AI service you choose, under its terms. This data room never sends your files anywhere.</p>
       </div>
       <MissingDocs back="/fill" heading="Files the room is still missing" />
     </>

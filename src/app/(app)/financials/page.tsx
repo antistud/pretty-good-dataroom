@@ -1,3 +1,5 @@
+import { TwoLines } from "@/components/charts";
+import { Icon } from "@/components/Icon";
 import { ExportBar } from "@/components/Export";
 import Link from "next/link";
 import { canSeeSection, requireSection } from "@/lib/auth";
@@ -64,9 +66,9 @@ export default async function Financials({ searchParams }: { searchParams: Promi
       <PageHead title="Financials" sub="Cash, burn and runway, month by month."><ExportBar links={me.canDownload ? [{ href: "/api/export/financials.csv", label: "Download CSV" }] : []} /></PageHead>
       <Flash sp={await searchParams} />
       {me.isStaff ? (
-        <Hint title="What to do here">Once a month, add one row: what came in, what went out, and the bank balance on the last day. That is all a pre-seed investor needs. These numbers also pre-fill your monthly investor update. Upload the detailed model to the Financials folder in Documents.</Hint>
+        <Hint title="What to do here">Once a month, add one row: money in, money out, and the bank balance on the last day. These numbers pre-fill your investor update.</Hint>
       ) : (
-        <Hint title="How to read this">Net burn is what the company spends each month after revenue. Runway is how many months the cash lasts at the recent rate of burn (cash divided by the average of the last three months). At pre-seed, expect little or no revenue; look at whether spending is disciplined and how long the money lasts.</Hint>
+        <Hint title="How to read this">Net burn is monthly spending after revenue. Runway is cash divided by the average burn of the last three months.</Hint>
       )}
 
       {rows.length === 0 ? (
@@ -74,21 +76,28 @@ export default async function Financials({ searchParams }: { searchParams: Promi
       ) : (
         <>
           <div className="grid3">
-            <div className="card"><div className="stat">{money(last.cash)}</div><div className="stat-label">Cash at end of {monthLabel(last.month)}</div></div>
-            <div className="card">
+            <div className="card"><div className="stat-row"><span className="icon-chip"><Icon name="bank" /></span><div><div className="stat">{money(last.cash)}</div><div className="stat-label">Cash at end of {monthLabel(last.month)}</div></div></div></div>
+            <div className="card"><div className="stat-row"><span className="icon-chip"><Icon name="trend" /></span><div>
               <div className="stat">{avgBurn > 0 ? money(avgBurn) : "Profitable"}</div>
-              <div className="stat-label">{avgBurn > 0 ? `Net burn per month (average of last ${recent.length})` : "Revenue covers expenses"}</div>
-            </div>
-            <div className="card">
+              <div className="stat-label">{avgBurn > 0 ? `Net burn a month (last ${recent.length})` : "Revenue covers expenses"}</div>
+            </div></div></div>
+            <div className="card"><div className="stat-row"><span className="icon-chip"><Icon name="clock" /></span><div>
               <div className="stat">{runway == null ? "Not burning" : `${num(runway, 1)} months`}</div>
-              <div className="stat-label">Runway at the current burn</div>
-            </div>
+              <div className="stat-label">Runway</div>
+            </div></div></div>
           </div>
 
           {rows.length > 1 && (
             <div className="card">
               <h2>Cash at month end</h2>
               <CashChart rows={rows.slice(-18)} />
+            </div>
+          )}
+
+          {rows.length > 1 && (
+            <div className="card">
+              <h2>Money in and out</h2>
+              <TwoLines rows={rows.slice(-18).map((r) => ({ label: r.month.slice(2), a: r.revenue, b: r.expenses }))} a="Revenue" b="Expenses" />
             </div>
           )}
 

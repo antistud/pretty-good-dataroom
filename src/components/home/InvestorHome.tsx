@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Icon, type IconName } from "@/components/Icon";
 import { FounderNote } from "@/components/FounderNote";
 import type { Viewer } from "@/lib/auth";
 import { canSeeSection } from "@/lib/auth";
@@ -44,15 +45,15 @@ export default async function InvestorHome({ me }: { me: Viewer }) {
     .sort((a, b) => (b.version_created_at ?? b.created_at).localeCompare(a.version_created_at ?? a.created_at))
     .slice(0, 8);
 
-  const here: { label: string; href: string; note: string }[] = [
-    ...(see("overview") ? [{ label: "Overview", href: "/overview", note: "What the company does and where it is today" }] : []),
-    ...(deck.length === 1 ? [{ label: "The deck", href: `/documents/${deck[0].id}`, note: deck[0].name }] : []),
-    ...(see("round") ? [{ label: "The round", href: "/round", note: "Amount, terms and how much is committed" }] : []),
-    ...(see("team") ? [{ label: "Team", href: "/team", note: "Who is building it" }] : []),
-    ...(see("captable") ? [{ label: "Cap table and SAFEs", href: "/captable", note: "Ownership today and after a priced round" }] : []),
-    ...(see("financials") ? [{ label: "Financials", href: "/financials", note: "Cash, burn and runway by month" }] : []),
-    ...(see("documents") ? [{ label: "Documents", href: "/documents", note: `${docs.length} file${docs.length === 1 ? "" : "s"} you can open` }] : []),
-    ...(see("updates") ? [{ label: "Monthly updates", href: "/updates", note: "What the founders have reported" }] : []),
+  const here: { label: string; href: string; note: string; icon: IconName }[] = [
+    ...(see("overview") ? [{ icon: "building" as const, label: "Overview", href: "/overview", note: "What the company does" }] : []),
+    ...(deck.length === 1 ? [{ icon: "file" as const, label: "The deck", href: `/documents/${deck[0].id}`, note: deck[0].name }] : []),
+    ...(see("round") ? [{ icon: "coins" as const, label: "The round", href: "/round", note: "Terms and progress" }] : []),
+    ...(see("team") ? [{ icon: "users" as const, label: "Team", href: "/team", note: "Who is building it" }] : []),
+    ...(see("captable") ? [{ icon: "pie" as const, label: "Cap table and SAFEs", href: "/captable", note: "Who owns what" }] : []),
+    ...(see("financials") ? [{ icon: "chart" as const, label: "Financials", href: "/financials", note: "Cash, burn and runway" }] : []),
+    ...(see("documents") ? [{ icon: "folder" as const, label: "Documents", href: "/documents", note: `${docs.length} file${docs.length === 1 ? "" : "s"} you can open` }] : []),
+    ...(see("updates") ? [{ icon: "mail" as const, label: "Monthly updates", href: "/updates", note: "From the founders" }] : []),
   ];
 
   return (
@@ -62,7 +63,7 @@ export default async function InvestorHome({ me }: { me: Viewer }) {
       {see("requests") && me.orgId && (
         <div className="card">
           <h2>What do you need from us?</h2>
-          <p className="muted" style={{ marginTop: -4, maxWidth: "62ch" }}>A document, a number, a call, an answer. Tell us what and when you need it by, and we will work to your timing.</p>
+          <p className="muted" style={{ marginTop: -4, maxWidth: "62ch" }}>A document, a number, a call. Tell us what, and by when.</p>
           <form action={createRequestAction}>
             <div className="grid2">
               <Field label="What you need"><input name="title" required maxLength={200} placeholder="e.g. Customer references, or a call with the CTO" /></Field>
@@ -99,11 +100,11 @@ export default async function InvestorHome({ me }: { me: Viewer }) {
         <h2>What is here</h2>
         <ul className="quiet-list">
           {here.map((h) => (
-            <li key={h.href}><Link href={h.href}>{h.label}</Link> <span className="muted">· {h.note}</span></li>
+            <li key={h.href} className="with-icon" style={{ display: "flex" }}><span className="icon-chip"><Icon name={h.icon} /></span><span><Link href={h.href}>{h.label}</Link> <span className="muted">· {h.note}</span></span></li>
           ))}
         </ul>
-        <p style={{ marginTop: 14 }}><Link className="btn small" href="/pack">Everything on one page, to print or save as PDF</Link></p>
-        {see("requests") && <p className="muted" style={{ marginTop: 10 }}>If something you would expect to see is not here, ask above and we will add it.</p>}
+        <p style={{ marginTop: 14 }}><Link className="btn small" href="/pack">Everything on one page</Link></p>
+        {see("requests") && <p className="muted" style={{ marginTop: 10 }}>Something missing? Ask above.</p>}
       </div>
 
       {momentum && (

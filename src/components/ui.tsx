@@ -26,13 +26,16 @@ export function PageHead({ title, sub, children }: { title: string; sub?: React.
   );
 }
 
-/** Plain-language guidance box: what this is and what to do next. */
-export function Hint({ title, children }: { title?: string; children: React.ReactNode }) {
+/**
+ * Plain-language guidance: what this page is and what to do on it. It stays
+ * folded behind its title so the page itself comes first; anyone unsure opens it.
+ */
+export function Hint({ title = "How this works", children }: { title?: string; children: React.ReactNode }) {
   return (
-    <div className="hint">
-      {title && <strong>{title}</strong>}
-      {children}
-    </div>
+    <details className="hint">
+      <summary><span aria-hidden>ⓘ</span> {title}</summary>
+      <div>{children}</div>
+    </details>
   );
 }
 

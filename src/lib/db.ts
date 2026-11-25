@@ -196,7 +196,9 @@ CREATE TABLE IF NOT EXISTS team_members (
   title TEXT,
   bio TEXT,
   link TEXT,
-  position INTEGER NOT NULL DEFAULT 0
+  position INTEGER NOT NULL DEFAULT 0,
+  photo_key TEXT,
+  photo_mime TEXT
 );
 
 CREATE TABLE IF NOT EXISTS pages (
@@ -410,6 +412,14 @@ function open(): Database.Database {
   if (!hasColumn("holders", "start_date")) {
     try {
       for (const col of ["start_date TEXT", "end_date TEXT", "vest_months INTEGER", "cliff_months INTEGER"]) d.exec(`ALTER TABLE holders ADD COLUMN ${col}`);
+    } catch {
+      /* another process added them first */
+    }
+  }
+  if (!hasColumn("team_members", "photo_key")) {
+    try {
+      d.exec("ALTER TABLE team_members ADD COLUMN photo_key TEXT");
+      d.exec("ALTER TABLE team_members ADD COLUMN photo_mime TEXT");
     } catch {
       /* another process added them first */
     }

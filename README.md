@@ -26,6 +26,7 @@ It does two jobs:
 | Set Me Up | A list of introductions you want, shown in the room and in every update email |
 | Investor home | A letter from the founders, what is in the room, and one question: what do you need, and by when. No checklists and no chasing |
 | Founder guide | A six-stage path through the raise, a daily note, a room health score and ready-to-edit wording for each message you need to send |
+| Charts and pictures | Ownership bars on the cap table and the priced-round model, money in and out, an investor funnel, a 14-day activity chart, vesting progress, team photos and a small icon set. Drawn on the server, no chart library |
 | Delight | An at-a-glance view of where every investor stands, drag-and-drop pipeline, search and jump (Ctrl/Cmd+K), light and dark themes, a quiet celebration when money lands |
 | Notifications | A "What's new" inbox for everyone, with matching emails each person can switch on or off by topic |
 | Replies | Readers can answer an update with one tap or a written reply; founders see who read it. Emails set Reply-To to a founder so replies reach a person |
