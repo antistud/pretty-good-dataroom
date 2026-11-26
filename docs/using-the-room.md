@@ -38,7 +38,13 @@ On the cap table, open **Dates and vesting** for a holder to record when they st
 
 If someone leaves, add the date under **Left on**. The cap table then counts only the shares that had vested on their last day, shows what went back to the company, and recalculates everyone's percentage. For example, a founder granted 4,800,000 shares on four-year vesting who leaves after 21 months keeps 2,100,000.
 
-Vesting is worked out monthly with nothing before the cliff. If your agreement says something different (acceleration, a negotiated exit), leave the vesting fields blank and enter the number of shares the person actually kept.
+Vesting is worked out monthly with nothing before the cliff, and each release is rounded down to a whole share, as stock agreements usually say. Always enter the **original grant** as the share count; the room works out what was kept.
+
+If the separation or repurchase paperwork states the number kept, and it differs from what the schedule gives (acceleration, a negotiated exit, a different rounding rule), enter it under **Shares kept on leaving**. That number then wins.
+
+### MFN clauses
+
+A SAFE marked MFN is assumed to take the best cap and discount of any SAFE signed **after** it, never an earlier one, so signing dates matter. The priced-round model can be run both ways ("Take better later terms" or "Convert as written"). Whether a particular clause really steps down is a question for your lawyer.
 
 ### What is still missing
 

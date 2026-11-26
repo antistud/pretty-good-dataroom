@@ -23,7 +23,9 @@ The assistant can fix what is already in the room, not only add to it. Ask it in
 - Dates can be written most ways ("March 1, 2026", "3/1/2026", "2026-03-01"). Slashed dates are read as month/day/year.
 - If it sends something the room cannot read or apply, the room tells both of you why, instead of dropping it.
 
-It cannot open or close a round, change who sees what, delete anything, or clear a field once set. Do those in the room.
+- It can empty a field that was filled in by mistake, and record the number of shares someone kept on leaving.
+
+It cannot open or close a round, change who sees what, or delete anything. Do those in the room.
 
 ## Getting the files themselves into the room
 

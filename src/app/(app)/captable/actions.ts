@@ -35,16 +35,18 @@ export async function saveHolderAction(form: FormData) {
   if (vest != null && (vest < 0 || vest > 240 || !Number.isInteger(vest))) flash("/captable", "Enter the vesting period as a whole number of months, for example 48.", "error");
   if (cliff != null && (cliff < 0 || !Number.isInteger(cliff) || (vest != null && cliff > vest))) flash("/captable", "The cliff must be a whole number of months, no longer than the vesting period.", "error");
   if (vest && !start) flash("/captable", "Add the start date, so vesting can be worked out.", "error");
-  const dates = [start, end, vest || null, vest ? cliff || 0 : null];
+  const kept = person && end ? formNum(form.get("kept_shares")) : null;
+  if (kept != null && (kept < 0 || kept > shares!)) flash("/captable", "The shares kept must be between zero and the number granted.", "error");
+  const dates = [start, end, vest || null, vest ? cliff || 0 : null, kept];
   if (id) {
-    run("UPDATE holders SET name = ?, kind = ?, share_class = ?, shares = ?, notes = ?, start_date = ?, end_date = ?, vest_months = ?, cliff_months = ? WHERE id = ?", name, kind, cls, shares, notes, ...dates, id);
+    run("UPDATE holders SET name = ?, kind = ?, share_class = ?, shares = ?, notes = ?, start_date = ?, end_date = ?, vest_months = ?, cliff_months = ?, kept_shares = ? WHERE id = ?", name, kind, cls, shares, notes, ...dates, id);
     logActivity(me, "holder.update", "holder", id, name);
   } else {
     const pos = q1<{ p: number }>("SELECT IFNULL(MAX(position), 0) + 1 AS p FROM holders")!.p;
-    const res = run("INSERT INTO holders (name, kind, share_class, shares, notes, position, start_date, end_date, vest_months, cliff_months) VALUES (?,?,?,?,?,?,?,?,?,?)", name, kind, cls, shares, notes, pos, ...dates);
+    const res = run("INSERT INTO holders (name, kind, share_class, shares, notes, position, start_date, end_date, vest_months, cliff_months, kept_shares) VALUES (?,?,?,?,?,?,?,?,?,?,?)", name, kind, cls, shares, notes, pos, ...dates);
     logActivity(me, "holder.create", "holder", Number(res.lastInsertRowid), name);
   }
-  const st = standing({ shares: shares!, start, end, vestMonths: vest, cliffMonths: cliff }, new Date().toISOString().slice(0, 10));
+  const st = standing({ shares: shares!, start, end, vestMonths: vest, cliffMonths: cliff, keptShares: kept }, new Date().toISOString().slice(0, 10));
   if (st.left && st.forfeited > 0) flash("/captable", `${name} saved. They keep ${Math.round(st.held).toLocaleString("en-US")} vested shares; the other ${Math.round(st.forfeited).toLocaleString("en-US")} no longer count.`);
   flash("/captable", `${name} saved.`);
 }

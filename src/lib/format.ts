@@ -5,7 +5,9 @@ export function money(n: number | null | undefined, compact = false): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
-    maximumFractionDigits: 0,
+    // Whole dollars in full; short form keeps up to two decimals, so $1.5M is never shown as $2M.
+    minimumFractionDigits: 0,
+    maximumFractionDigits: compact ? 2 : 0,
     notation: compact ? "compact" : "standard",
   }).format(n);
 }

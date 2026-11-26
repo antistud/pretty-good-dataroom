@@ -103,12 +103,14 @@ const PROPOSE_SCHEMA = {
           name: { type: "string", description: "Person or entity; 'Option pool' for unissued reserved shares." },
           kind: { type: "string", enum: ["founder", "employee", "advisor", "investor", "pool"] },
           share_class: nullable("string", "For example Common."),
-          shares: nullable("number", "Whole number of shares originally granted or bought (not the vested number)."),
+          shares: nullable("number", "Whole number of shares ORIGINALLY granted or bought. Never the vested or kept number: the room works that out from the dates, or takes it from shares_kept."),
           start_date: nullable("string", `When they started and vesting began. ${DATE}`),
           vest_months: nullable("number", "Length of the vesting schedule in months, for example 48. Omit if the shares do not vest."),
           cliff_months: nullable("number", "Months before anything vests, for example 12."),
           end_date: nullable("string", `The day they left the company, if they have. ${DATE} The room then counts only the shares vested by that day.`),
           notes: nullable("string", "A short note, for example 'Acceleration on change of control'."),
+          shares_kept: nullable("number", "Only for someone who has left, and only when the separation or repurchase paperwork states the number they kept. It overrides the vesting schedule. Keep 'shares' as the ORIGINAL grant; never put the kept number there."),
+          clear: { type: "array", items: { type: "string", enum: ["start_date", "end_date", "vest_months", "cliff_months", "shares_kept", "notes"] }, description: "Fields to empty on an existing holder. Sending null does not clear a field; listing it here does." },
         },
       },
     },
@@ -138,9 +140,10 @@ const PROPOSE_SCHEMA = {
           valuation_cap: nullable("number", "US dollars."),
           discount_percent: nullable("number", "20 for 20%."),
           type: { type: "string", enum: ["post", "pre"], description: "post-money or pre-money SAFE." },
-          mfn: { type: "boolean" },
+          mfn: { type: "boolean", description: "True only if this SAFE has a most-favoured-nation clause. The room lets an MFN SAFE take better terms from SAFEs signed after it, so signing dates matter." },
           signed_on: nullable("string", `The date it was signed. ${DATE}`),
           status: { type: "string", enum: ["committed", "signed", "wired"] },
+          clear: { type: "array", items: { type: "string", enum: ["valuation_cap", "discount_percent", "signed_on"] }, description: "Fields to empty on an existing SAFE, for example a cap entered by mistake on an uncapped SAFE." },
         },
       },
     },
@@ -223,7 +226,7 @@ function roomSnapshot() {
   // "shares" is what counts today; "shares_granted" is the original grant, which is what propose_changes takes.
   const holders = listHolders().map((h) => ({
     name: h.name, kind: h.kind, share_class: h.share_class, shares: h.shares, shares_granted: h.granted,
-    start_date: h.start_date, vest_months: h.vest_months, cliff_months: h.cliff_months, end_date: h.end_date, shares_vested: h.vested, notes: h.notes,
+    start_date: h.start_date, vest_months: h.vest_months, cliff_months: h.cliff_months, end_date: h.end_date, shares_kept: h.kept_shares, shares_vested: h.vested, notes: h.notes,
   }));
   const rounds = q<Record<string, unknown>>("SELECT name, instrument, status, target_amount, valuation_cap, discount, pre_money, min_check, opened_at, closed_at FROM rounds ORDER BY id")
     .map(({ discount, ...r }) => ({ ...r, discount_percent: typeof discount === "number" ? +(discount * 100).toFixed(4) : null }));

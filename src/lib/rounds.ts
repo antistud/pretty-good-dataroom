@@ -38,13 +38,13 @@ export type HolderRow = {
   id: number; name: string; kind: HolderInput["kind"]; share_class: string; notes: string | null; position: number;
   /** Shares that count on the cap table today: everything granted, or only what had vested if the person has left. */
   shares: number;
-  start_date: string | null; end_date: string | null; vest_months: number | null; cliff_months: number | null;
+  start_date: string | null; end_date: string | null; vest_months: number | null; cliff_months: number | null; kept_shares: number | null;
 } & Standing;
 
 /** Every holder with their dates applied. Use this, not the table, wherever shares are counted. */
 export function listHolders(today = new Date().toISOString().slice(0, 10)): HolderRow[] {
   return q<Omit<HolderRow, keyof Standing>>("SELECT * FROM holders ORDER BY position, id").map((h) => {
-    const st = standing({ shares: h.shares, start: h.start_date, end: h.end_date, vestMonths: h.vest_months, cliffMonths: h.cliff_months }, today);
+    const st = standing({ shares: h.shares, start: h.start_date, end: h.end_date, vestMonths: h.vest_months, cliffMonths: h.cliff_months, keptShares: h.kept_shares }, today);
     return { ...h, ...st, shares: st.held };
   });
 }
@@ -79,7 +79,7 @@ export function holderInputs(): HolderInput[] {
 }
 export function safeInputs(where = "", ...params: unknown[]): SafeInput[] {
   return q<SafeRow>(`SELECT * FROM safes ${where} ORDER BY signed_on, id`, ...params).map((s) => ({
-    name: s.investor_name, amount: s.amount, kind: s.kind, cap: s.valuation_cap, discount: s.discount, mfn: !!s.mfn,
+    name: s.investor_name, amount: s.amount, kind: s.kind, cap: s.valuation_cap, discount: s.discount, mfn: !!s.mfn, signedOn: s.signed_on,
   }));
 }
 

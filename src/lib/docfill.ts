@@ -14,9 +14,13 @@ export type Member = { name: string; title: string; bio: string; link: string };
 export type Holder = {
   name: string; kind: "founder" | "employee" | "advisor" | "investor" | "pool" | null; share_class: string; shares: number | null;
   start_date: string | null; end_date: string | null; vest_months: number | null; cliff_months: number | null; notes: string;
+  /** What they kept on leaving, when the paperwork gives a number. */
+  shares_kept: number | null;
+  /** Fields to empty on an existing entry. A missing or null value never clears anything; this does. */
+  clear: string[];
 };
 export type Round = { name: string; instrument: "safe" | "priced" | null; target_amount: number | null; valuation_cap: number | null; discount_percent: number | null; pre_money: number | null; min_check: number | null; use_of_funds: string };
-export type Safe = { investor: string; amount: number | null; valuation_cap: number | null; discount_percent: number | null; type: "post" | "pre" | null; mfn: boolean | null; signed_on: string | null; status: "committed" | "signed" | "wired" | null };
+export type Safe = { investor: string; amount: number | null; valuation_cap: number | null; discount_percent: number | null; type: "post" | "pre" | null; mfn: boolean | null; signed_on: string | null; status: "committed" | "signed" | "wired" | null; clear: string[] };
 export type Month = { month: string; revenue: number | null; expenses: number | null; cash: number | null; notes: string };
 /** `ignored` lists values that were sent but could not be understood, so the founder and the assistant both hear about them. */
 export type Answer = { company: Company | null; team: Member[]; holders: Holder[]; round: Round | null; safes: Safe[]; financials: Month[]; unsure: string[]; ignored: string[] };
@@ -108,6 +112,9 @@ export function extractJson(text: string): unknown {
   return null;
 }
 
+/** The field names in a "clear" list that are allowed for that kind of entry. */
+const cleared = (v: unknown, allowed: string[]): string[] => [...new Set(list(v, 10).map((x) => str(x, 40)).filter((x) => allowed.includes(x)))];
+
 /** Turns whatever was pasted into a checked, bounded Answer, or null if it is not usable at all. */
 export function parseAnswer(text: string): Answer | null {
   const raw = obj(typeof text === "string" ? extractJson(text.slice(0, 200_000)) : null);
@@ -159,9 +166,11 @@ export function parseAnswer(text: string): Answer | null {
         vest_months: read(h.vest_months ?? h.vesting_months, months, `${who}, vesting period`, "Use a whole number of months, for example 48."),
         cliff_months: read(h.cliff_months, months, `${who}, cliff`, "Use a whole number of months, for example 12."),
         notes: str(h.notes, 500),
+        shares_kept: read(h.shares_kept, amount0, `${who}, shares kept`, "Use a whole number."),
+        clear: cleared(h.clear, ["start_date", "end_date", "vest_months", "cliff_months", "shares_kept", "notes"]),
       };
     })
-    .filter((h) => h.shares != null || h.kind || h.share_class || h.start_date || h.end_date || h.vest_months != null || h.cliff_months != null || h.notes);
+    .filter((h) => h.clear.length > 0 || h.shares_kept != null || h.shares != null || h.kind || h.share_class || h.start_date || h.end_date || h.vest_months != null || h.cliff_months != null || h.notes);
 
   const r = obj(raw.round);
   const rname = r ? str(r.name, 120) : "";
@@ -196,9 +205,10 @@ export function parseAnswer(text: string): Answer | null {
         mfn: typeof s.mfn === "boolean" ? s.mfn : null,
         signed_on: read(s.signed_on, parseDate, `${who}, date signed`, DATE),
         status: status === "wired" || status === "signed" || status === "committed" ? status : null,
+        clear: cleared(s.clear, ["valuation_cap", "discount_percent", "signed_on"]),
       } as Safe;
     })
-    .filter((s) => s.amount != null || s.valuation_cap != null || s.discount_percent != null || s.type || s.mfn != null || s.signed_on || s.status);
+    .filter((s) => s.clear.length > 0 || s.amount != null || s.valuation_cap != null || s.discount_percent != null || s.type || s.mfn != null || s.signed_on || s.status);
 
   const seen = new Set<string>();
   const financials: Month[] = list(raw.financials, 60)
@@ -248,7 +258,7 @@ Reply with ONE code block containing JSON in exactly this shape, and nothing aft
     { "name": "", "title": "", "bio": "two or three sentences from the deck", "link": "LinkedIn or personal URL if shown, else null" }
   ],
   "holders": [
-    { "name": "person or entity holding shares, or 'Option pool' for unissued reserved shares", "kind": "founder | employee | advisor | investor | pool", "share_class": "Common", "shares": 0, "start_date": "YYYY-MM-DD vesting start, or null", "vest_months": null, "cliff_months": null, "end_date": "YYYY-MM-DD if they have left, else null" }
+    { "name": "person or entity holding shares, or 'Option pool' for unissued reserved shares", "kind": "founder | employee | advisor | investor | pool", "share_class": "Common", "shares": 0, "start_date": "YYYY-MM-DD vesting start, or null", "vest_months": null, "cliff_months": null, "end_date": "YYYY-MM-DD if they have left, else null", "shares_kept": "the number kept on leaving if the separation paperwork states one, else null" }
   ],
   "round": {
     "name": "for example Pre-seed",

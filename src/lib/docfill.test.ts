@@ -37,7 +37,7 @@ describe("parseAnswer", () => {
     expect(a.holders.map((h) => h.name)).toEqual(["Ann", "Jeff Stafford"]);
     expect(a.holders[0]).toMatchObject({ kind: null, shares: 10 });
     expect(a.holders[1]).toMatchObject({ shares: null, end_date: "2025-10-20" });
-    expect(a.safes).toEqual([{ investor: "Y", amount: 50000, valuation_cap: null, discount_percent: null, type: "pre", mfn: null, signed_on: null, status: null }]);
+    expect(a.safes).toEqual([{ investor: "Y", amount: 50000, valuation_cap: null, discount_percent: null, type: "pre", mfn: null, signed_on: null, status: null, clear: [] }]);
     expect(a.ignored).toEqual(['Greg, shares: could not read "-5". Use a whole number.', 'SAFE with Y, date signed: could not read "Q1 2026". Use YYYY-MM-DD.']);
   });
   it("reads vesting, leaving dates and monthly financials", () => {

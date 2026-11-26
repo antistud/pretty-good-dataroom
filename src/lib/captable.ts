@@ -13,10 +13,12 @@
  *   increase. The pool top-up therefore dilutes existing holders, not new investors.
  * - A SAFE converts at the lowest of: its cap price, its discounted round price,
  *   and the round price itself.
- * - MFN is simplified: an MFN SAFE takes the lowest cap and the highest discount
- *   found on ANY other SAFE (a real MFN clause only reaches later SAFEs and is
- *   elected by the investor). An inherited cap keeps the pre/post-money type of
- *   the SAFE it came from.
+ * - MFN: an MFN SAFE takes the lowest cap and the highest discount found on any
+ *   SAFE signed AFTER it, which is how the clause normally reads. When either
+ *   signing date is unknown, the other SAFE is treated as later. A real clause
+ *   is elected by the investor and may be worded differently, so this is an
+ *   assumption to confirm with counsel. An inherited cap keeps the
+ *   pre/post-money type of the SAFE it came from.
  *
  * This is a planning model. Closing numbers come from your lawyer.
  */
@@ -31,6 +33,8 @@ export type SafeInput = {
   /** Fraction, e.g. 0.2 for a 20% discount. */
   discount?: number | null;
   mfn?: boolean;
+  /** ISO date the SAFE was signed. Used to decide which SAFEs an MFN clause can reach. */
+  signedOn?: string | null;
 };
 export type RoundInput = {
   preMoney: number;
@@ -49,6 +53,8 @@ export function resolveMfn(safes: SafeInput[]): ResolvedSafe[] {
     if (s.mfn) {
       safes.forEach((o, j) => {
         if (i === j) return;
+        // An MFN clause only reaches SAFEs issued later.
+        if (s.signedOn && o.signedOn && o.signedOn <= s.signedOn) return;
         if (o.cap && o.cap > 0 && (effCap === null || o.cap < effCap)) {
           effCap = o.cap;
           effKind = o.kind;
@@ -197,6 +203,11 @@ export type VestingInput = {
   vestMonths?: number | null;
   /** Months before anything vests. */
   cliffMonths?: number | null;
+  /**
+   * What the person actually kept on leaving, when the separation paperwork gives a number. It overrides the
+   * schedule, because the signed number is the true one (acceleration, a negotiated exit, a different rounding rule).
+   */
+  keptShares?: number | null;
 };
 export type Standing = {
   /** What counts on the cap table: everything granted while the person is here, only what had vested once they have left. */
@@ -229,21 +240,28 @@ function addMonths(date: string, months: number): string {
   return `${first.getUTCFullYear()}-${String(first.getUTCMonth() + 1).padStart(2, "0")}-${String(Math.min(d, last)).padStart(2, "0")}`;
 }
 
-/** Shares vested on a given day: nothing before the cliff, then in equal monthly steps. Whole shares, rounded down. */
+/**
+ * Shares vested on a given day. Nothing before the cliff; at the cliff, the
+ * cliff's share of the grant; then one equal release each month. Every release
+ * is rounded down to a whole share, as stock agreements usually say, and the
+ * last release makes up the difference.
+ */
 export function vestedShares(v: VestingInput, asOf: string): number {
   const months = Math.max(0, Math.floor(v.vestMonths || 0));
   if (!months || !v.start || !ISO.test(v.start)) return v.shares;
+  const cliff = Math.min(months, Math.max(0, Math.floor(v.cliffMonths || 0)));
   const elapsed = monthsBetween(v.start, asOf);
-  if (asOf < v.start || elapsed < Math.max(0, v.cliffMonths || 0)) return 0;
+  if (asOf < v.start || elapsed < cliff) return 0;
   if (elapsed >= months) return v.shares;
-  return Math.floor((v.shares * elapsed) / months);
+  return Math.floor((v.shares * cliff) / months) + (elapsed - cliff) * Math.floor(v.shares / months);
 }
 
 /** Where a holder stands today. Someone who left keeps what had vested on their last day; the rest goes back to the company. */
 export function standing(v: VestingInput, today: string): Standing {
   const vests = !!(v.vestMonths && v.vestMonths > 0 && v.start && ISO.test(v.start));
   const left = !!(v.end && ISO.test(v.end) && v.end <= today);
-  const vested = vestedShares(v, left ? v.end! : today);
-  const held = left && vests ? vested : v.shares;
-  return { held, granted: v.shares, vested: vests ? vested : v.shares, forfeited: v.shares - held, left, vests, fullyVestedOn: vests ? addMonths(v.start!, Math.floor(v.vestMonths!)) : null };
+  const kept = left && v.keptShares != null && v.keptShares >= 0 ? Math.min(v.keptShares, v.shares) : null;
+  const vested = kept ?? vestedShares(v, left ? v.end! : today);
+  const held = kept ?? (left && vests ? vested : v.shares);
+  return { held, granted: v.shares, vested: vests || kept != null ? vested : v.shares, forfeited: v.shares - held, left, vests, fullyVestedOn: vests ? addMonths(v.start!, Math.floor(v.vestMonths!)) : null };
 }

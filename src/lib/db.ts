@@ -163,7 +163,8 @@ CREATE TABLE IF NOT EXISTS holders (
   start_date TEXT,
   end_date TEXT,
   vest_months INTEGER,
-  cliff_months INTEGER
+  cliff_months INTEGER,
+  kept_shares REAL
 );
 
 CREATE TABLE IF NOT EXISTS safes (
@@ -436,6 +437,13 @@ function open(): Database.Database {
       d.exec("ALTER TABLE team_members ADD COLUMN photo_mime TEXT");
     } catch {
       /* another process added them first */
+    }
+  }
+  if (!hasColumn("holders", "kept_shares")) {
+    try {
+      d.exec("ALTER TABLE holders ADD COLUMN kept_shares REAL");
+    } catch {
+      /* another process added it first */
     }
   }
   if (!hasColumn("requests", "needed_by")) {

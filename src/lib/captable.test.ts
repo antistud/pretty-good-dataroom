@@ -164,4 +164,41 @@ describe("vesting and dates", () => {
   it("rounds down to whole shares", () => {
     expect(vestedShares({ shares: 1000, start: "2024-01-01", vestMonths: 48 }, "2024-02-01")).toBe(20);
   });
+
+  it("rounds each release down, as stock agreements usually do", () => {
+    // 1,000,000 shares over 36 months with a 12-month cliff, leaving after 19 months:
+    // 333,333 at the cliff, then seven releases of 27,777.
+    const grant = { shares: 1_000_000, start: "2024-08-01", vestMonths: 36, cliffMonths: 12 };
+    expect(vestedShares(grant, "2025-08-01")).toBe(333_333);
+    expect(vestedShares(grant, "2026-03-16")).toBe(527_772);
+    expect(standing({ ...grant, end: "2026-03-16" }, "2026-11-26")).toMatchObject({ held: 527_772, forfeited: 472_228 });
+    expect(vestedShares(grant, "2027-08-01")).toBe(1_000_000);
+  });
+
+  it("the number in the separation paperwork overrides the schedule", () => {
+    const grant = { shares: 1_000_000, start: "2024-08-01", vestMonths: 36, cliffMonths: 12, end: "2026-03-16" };
+    expect(standing({ ...grant, keptShares: 600_000 }, "2026-11-26")).toMatchObject({ held: 600_000, vested: 600_000, forfeited: 400_000 });
+    expect(standing({ shares: 1000, end: "2026-01-01", keptShares: 250 }, "2026-11-26")).toMatchObject({ held: 250, forfeited: 750 });
+    expect(standing({ ...grant, end: null, keptShares: 5 }, "2026-01-01").held).toBe(1_000_000);
+    expect(standing({ ...grant, keptShares: 9_999_999 }, "2026-11-26").held).toBe(1_000_000);
+  });
+});
+
+describe("MFN and signing dates", () => {
+  const holders = [{ name: "Founders", kind: "founder" as const, shares: 9_400_000 }, { name: "Pool", kind: "pool" as const, shares: 600_000 }];
+  it("an MFN clause reaches only SAFEs signed after it", () => {
+    const safes = [
+      { name: "Early", amount: 50_000, kind: "post" as const, cap: 1_500_000, mfn: true, signedOn: "2023-11-03" },
+      { name: "Middle", amount: 50_000, kind: "post" as const, cap: 1_000_000, mfn: true, signedOn: "2025-02-27" },
+      { name: "Last", amount: 50_000, kind: "post" as const, cap: 2_000_000, mfn: true, signedOn: "2025-04-15" },
+    ];
+    const r = resolveMfn(safes);
+    expect(r.map((s) => s.effCap)).toEqual([1_000_000, 1_000_000, 2_000_000]);
+    expect(safeOwnershipToday(safes)).toBeCloseTo(0.05 + 0.05 + 0.025, 10);
+    void holders;
+  });
+  it("with no dates, any other SAFE counts", () => {
+    const r = resolveMfn([{ name: "A", amount: 1, kind: "post", cap: 2_000_000, mfn: true }, { name: "B", amount: 1, kind: "post", cap: 1_000_000 }]);
+    expect(r[0].effCap).toBe(1_000_000);
+  });
 });

@@ -37,10 +37,16 @@ export default async function CapTable({ searchParams }: { searchParams: Promise
   // Pro-forma defaults: the next priced round if one is planned, otherwise round numbers.
   const priced = q<RoundRow>("SELECT * FROM rounds WHERE instrument = 'priced' AND status != 'closed' ORDER BY id LIMIT 1")[0];
   const topCap = Math.max(0, ...safes.map((s) => s.valuation_cap ?? 0));
-  const pre = parse(sp.pre) ?? priced?.pre_money ?? (topCap > 0 ? topCap * 1.5 : 10_000_000);
-  const newMoney = parse(sp.money) ?? (priced?.target_amount || 2_000_000);
+  // With nothing planned, show an ordinary-looking example: a valuation above the highest cap, selling 20%.
+  const pre = parse(sp.pre) ?? priced?.pre_money ?? (topCap > 0 ? topCap * 2.5 : 10_000_000);
+  const newMoney = parse(sp.money) ?? (priced?.target_amount || Math.round(pre / 4));
+  const example = parse(sp.pre) == null && !priced;
+  // MFN step-downs are an assumption about how each clause reads, so the model can be run with and without them.
+  const useMfn = sp.mfn !== "0";
+  const anyMfn = safes.some((x) => x.mfn);
+  const modelSafes = safeInputs().map((x) => (useMfn ? x : { ...x, mfn: false }));
   const poolPct = parse(sp.pool) ?? (priced?.new_pool_pct != null ? priced.new_pool_pct * 100 : 10);
-  const sim = holders.length ? simulate(holderInputs(), safeInputs(), { preMoney: pre, newMoney, poolPct: poolPct / 100 }) : null;
+  const sim = holders.length ? simulate(holderInputs(), modelSafes, { preMoney: pre, newMoney, poolPct: poolPct / 100 }) : null;
 
   const rounds = me.isStaff ? q<RoundRow>("SELECT * FROM rounds ORDER BY id DESC") : [];
   const orgs = me.isStaff ? q<{ id: number; name: string }>("SELECT id, name FROM orgs WHERE kind = 'investor' ORDER BY name") : [];
@@ -102,6 +108,7 @@ export default async function CapTable({ searchParams }: { searchParams: Promise
   /** One plain sentence about a holder's dates, or nothing when there are none. */
   const vestingLine = (h: HolderRow): string => {
     const schedule = h.vests ? `${h.vest_months}-month vesting${h.cliff_months ? ` with a ${h.cliff_months}-month cliff` : ""}` : "";
+    if (h.left && h.kept_shares != null) return `${h.start_date ? `Started ${fmtDate(h.start_date)}. ` : ""}Kept ${num(h.held)} of ${num(h.granted)} shares under the separation paperwork${h.forfeited > 0 ? `; ${num(h.forfeited)} went back to the company` : ""}.`;
     if (h.left && h.vests) return h.forfeited > 0 ? `Started ${fmtDate(h.start_date)}. Kept ${num(h.held)} of ${num(h.granted)} shares; ${num(h.forfeited)} had not vested and went back to the company.` : `Started ${fmtDate(h.start_date)}. Fully vested before leaving.`;
     if (h.left) return h.start_date ? `Here from ${fmtDate(h.start_date)}.` : "";
     if (h.vests) return h.vested >= h.granted ? `Fully vested (${schedule}, from ${fmtDate(h.start_date)}).` : `${num(h.vested)} vested so far; ${schedule} from ${fmtDate(h.start_date)}, complete ${fmtDate(h.fullyVestedOn)}.`;
@@ -121,7 +128,7 @@ export default async function CapTable({ searchParams }: { searchParams: Promise
       <Field label="Class"><input name="share_class" maxLength={60} defaultValue={h?.share_class ?? "Common"} /></Field>
       <Field label="Shares granted"><input name="shares" required inputMode="decimal" defaultValue={h?.granted} /></Field>
       <Field label="Notes"><input name="notes" maxLength={500} defaultValue={h?.notes ?? ""} /></Field>
-      <details className="dates" open={!!(h?.start_date || h?.end_date || h?.vest_months)}>
+      <details className="dates" open={!!(h?.start_date || h?.end_date || h?.vest_months || h?.kept_shares != null)}>
         <summary className="small">Dates and vesting</summary>
         <p className="muted small" style={{ margin: "6px 0 10px", maxWidth: "60ch" }}>Add these when shares vest over time, or when someone has left. A person who leaves before they are fully vested keeps what had vested on their last day; the rest stops counting on the cap table. Leave it all blank for shares that are simply owned.</p>
         <div className="inline-form">
@@ -129,6 +136,7 @@ export default async function CapTable({ searchParams }: { searchParams: Promise
           <Field label="Vests over (months)" hint="Usually 48."><input name="vest_months" inputMode="numeric" defaultValue={h?.vest_months ?? ""} placeholder="48" /></Field>
           <Field label="Cliff (months)" hint="Usually 12."><input name="cliff_months" inputMode="numeric" defaultValue={h?.vest_months ? h?.cliff_months ?? "" : ""} placeholder="12" /></Field>
           <Field label="Left on" hint="Blank if still here."><input type="date" name="end_date" defaultValue={h?.end_date ?? ""} /></Field>
+          <Field label="Shares kept on leaving" hint="Only if the paperwork gives a number. It overrides the schedule."><input name="kept_shares" inputMode="decimal" defaultValue={h?.kept_shares ?? ""} /></Field>
         </div>
       </details>
       <button className="btn primary">{h ? "Save" : "Add holder"}</button>
@@ -266,7 +274,7 @@ export default async function CapTable({ searchParams }: { searchParams: Promise
             <ul>
               <li><strong>Valuation cap.</strong> The highest company value the SAFE can convert at. On a post-money SAFE the maths is simple: amount ÷ cap = the share of the company the investor holds once all SAFEs convert. $500k on a $5M cap is 10%.</li>
               <li><strong>Discount.</strong> A percentage off the price new investors pay in the priced round. If a SAFE has both a cap and a discount, the investor gets whichever gives more shares.</li>
-              <li><strong>MFN.</strong> “Most favoured nation”: if a later SAFE has better terms, this investor can take those terms instead.</li>
+              <li><strong>MFN.</strong> “Most favoured nation”: if a later SAFE has better terms, this investor can take those terms instead. It never reaches back to earlier SAFEs.</li>
               <li><strong>Post-money or pre-money.</strong> Post-money SAFEs fix the investor&apos;s percentage; each new SAFE dilutes the founders, not earlier SAFE holders. Pre-money SAFEs (older) dilute each other.</li>
               <li><strong>Then the round happens.</strong> Everyone, SAFE holders included, is diluted by the new investors and by any increase in the option pool.</li>
             </ul>
@@ -289,8 +297,17 @@ export default async function CapTable({ searchParams }: { searchParams: Promise
           <Field label="Pre-money valuation ($)"><input name="pre" inputMode="decimal" defaultValue={pre} /></Field>
           <Field label="New money raised ($)"><input name="money" inputMode="decimal" defaultValue={newMoney} /></Field>
           <Field label="Option pool after round (%)"><input name="pool" inputMode="decimal" defaultValue={poolPct} /></Field>
+          {anyMfn && (
+            <Field label="MFN clauses">
+              <select name="mfn" defaultValue={useMfn ? "1" : "0"}>
+                <option value="1">Take better later terms</option>
+                <option value="0">Convert as written</option>
+              </select>
+            </Field>
+          )}
           <button className="btn">Recalculate</button>
         </form>
+        {example && <p className="notice warn" style={{ marginTop: -4 }}>These are example terms, not a plan: a {money(pre, true)} pre-money valuation raising {money(newMoney, true)}. Put in your own numbers.</p>}
         {!sim ? (
           <div className="empty">Add shareholders first and the model appears here.</div>
         ) : !sim.ok ? (
@@ -331,7 +348,7 @@ export default async function CapTable({ searchParams }: { searchParams: Promise
               </>
             )}
             <p className="muted small" style={{ marginTop: 10 }}>
-              Assumes the option pool increase comes out of the pre-money valuation and that MFN SAFEs take the best terms of any other SAFE. A planning model only; your lawyer&apos;s closing spreadsheet is the real one.
+              Assumes the option pool increase comes out of the pre-money valuation. An MFN SAFE is assumed to take the best cap and discount of any SAFE signed after it; whether a clause really does that is a question for your lawyer. A planning model only; your lawyer&apos;s closing spreadsheet is the real one.
             </p>
           </>
         )}

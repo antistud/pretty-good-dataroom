@@ -29,6 +29,13 @@ function differ(existing: Record<string, unknown> | undefined) {
     sets,
     changes,
     /** Proposes `value` for `column` unless nothing was given or it already says that. */
+    /** Empties `column` on an existing entry that has something in it. */
+    clear(column: string, label: string, show: (v: never) => string = txt as never) {
+      const now = existing?.[column];
+      if (!existing || now == null || now === "" || column in sets) return;
+      sets[column] = null;
+      changes.push({ label, from: (show as (v: unknown) => string)(now), to: "(cleared)" });
+    },
     put(column: string, label: string, value: string | number | null, show: (v: never) => string = txt as never, close = false) {
       if (value == null || value === "") return;
       const now = existing?.[column];
@@ -62,7 +69,7 @@ function work(answer: Answer) {
     return { kind: outcome(ex, d.changes), id: ex?.id, title: m.name, summary: [m.title, m.bio].filter(Boolean).join(". "), changes: d.changes, sets: d.sets };
   });
 
-  type H = { id: number; name: string; kind: string; share_class: string; shares: number; notes: string | null; start_date: string | null; end_date: string | null; vest_months: number | null; cliff_months: number | null };
+  type H = { id: number; name: string; kind: string; share_class: string; shares: number; notes: string | null; start_date: string | null; end_date: string | null; vest_months: number | null; cliff_months: number | null; kept_shares: number | null };
   const holders = q<H>("SELECT * FROM holders");
   const holderPlans: Work[] = answer.holders.map((h) => {
     const ex = holders.find((x) => same(x.name, h.name));
@@ -75,6 +82,11 @@ function work(answer: Answer) {
     d.put("cliff_months", "Cliff (months)", h.cliff_months);
     d.put("end_date", "Left on", h.end_date);
     d.put("notes", "Notes", h.notes, cut as never);
+    d.put("kept_shares", "Shares kept on leaving", h.shares_kept, n0 as never);
+    const HOLDER_CLEAR: Record<string, [string, string]> = { start_date: ["start_date", "Started"], end_date: ["end_date", "Left on"], vest_months: ["vest_months", "Vests over (months)"], cliff_months: ["cliff_months", "Cliff (months)"], shares_kept: ["kept_shares", "Shares kept on leaving"], notes: ["notes", "Notes"] };
+    for (const f of h.clear) d.clear(HOLDER_CLEAR[f][0], HOLDER_CLEAR[f][1], (f === "notes" ? cut : f === "shares_kept" ? n0 : txt) as never);
+    // Without a vesting period there is no cliff either.
+    if (d.sets.vest_months === null) d.clear("cliff_months", "Cliff (months)");
     const after = { ...ex, ...d.sets } as Partial<H>;
     const base = { id: ex?.id, title: h.name, summary: h.shares != null ? `${n0(h.shares)} ${h.share_class || "Common"} shares` : "", changes: d.changes, sets: d.sets };
     const bad = (why: string): Work => ({ ...base, kind: "invalid", why });
@@ -82,6 +94,8 @@ function work(answer: Answer) {
     if (after.start_date && after.end_date && after.end_date < after.start_date) return bad("The leaving date is before the start date.");
     if (after.vest_months && !after.start_date) return bad("A vesting period needs a start date.");
     if (after.cliff_months != null && after.vest_months != null && after.cliff_months > after.vest_months) return bad("The cliff is longer than the vesting period.");
+    if (after.kept_shares != null && !after.end_date) return bad("Shares kept on leaving needs a leaving date.");
+    if (after.kept_shares != null && after.shares != null && after.kept_shares > after.shares) return bad("Shares kept cannot be more than the shares granted.");
     if ((ex?.kind ?? h.kind) === "pool" && (after.start_date || after.end_date || after.vest_months)) return bad("The option pool cannot have dates or vesting.");
     return { ...base, kind: outcome(ex, d.changes) };
   });
@@ -100,6 +114,9 @@ function work(answer: Answer) {
     d.put("mfn", "MFN", s.mfn == null ? null : s.mfn ? 1 : 0, ((v: number | null) => (v == null ? "—" : v ? "yes" : "no")) as never);
     d.put("signed_on", "Date signed", s.signed_on);
     d.put("status", "Status", s.status);
+    if (s.clear.includes("valuation_cap")) d.clear("valuation_cap", "Valuation cap", usd as never);
+    if (s.clear.includes("discount_percent")) d.clear("discount", "Discount", ((v: number | null) => (v == null ? "—" : `${+(v * 100).toFixed(2)}%`)) as never);
+    if (s.clear.includes("signed_on")) d.clear("signed_on", "Date signed");
     const base = { id: ex?.id, title: s.investor, summary: s.amount != null ? `${usd(s.amount)}${s.valuation_cap ? ` at a ${usd(s.valuation_cap)} cap` : ""}` : "", changes: d.changes, sets: d.sets };
     if (!ex && mine.length > 1) return { ...base, kind: "invalid" as const, why: `There are ${mine.length} SAFEs with this investor. Include the amount so the right one is updated.` };
     if (!ex && s.amount == null) return { ...base, kind: "invalid" as const, why: "No SAFE with this investor yet, and no amount was given." };
@@ -161,7 +178,7 @@ export function tally(answer: Answer): Record<Plan["kind"], number> {
   return { new: all.filter((p) => p.kind === "new").length, update: all.filter((p) => p.kind === "update").length, same: all.filter((p) => p.kind === "same").length, invalid: all.filter((p) => p.kind === "invalid").length };
 }
 
-const HOLDER_COLS = ["kind", "share_class", "shares", "start_date", "end_date", "vest_months", "cliff_months", "notes"];
+const HOLDER_COLS = ["kind", "share_class", "shares", "start_date", "end_date", "vest_months", "cliff_months", "kept_shares", "notes"];
 const TEAM_COLS = ["title", "bio", "link"];
 const SAFE_COLS = ["amount", "kind", "valuation_cap", "discount", "mfn", "status", "signed_on"];
 const ROUND_COLS = ["instrument", "target_amount", "valuation_cap", "discount", "pre_money", "min_check", "terms_md"];
@@ -212,9 +229,9 @@ export function applyAnswer(answer: Answer, picked: Set<string>): string[] {
       if (p.kind === "new") {
         const person = (h.kind ?? "investor") !== "pool";
         run(
-          "INSERT INTO holders (name, kind, share_class, shares, notes, position, start_date, end_date, vest_months, cliff_months) VALUES (?,?,?,?,?,?,?,?,?,?)",
+          "INSERT INTO holders (name, kind, share_class, shares, notes, position, start_date, end_date, vest_months, cliff_months, kept_shares) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
           h.name, h.kind ?? "investor", h.share_class || "Common", h.shares, h.notes || null, ++hpos,
-          person ? h.start_date : null, person ? h.end_date : null, person ? h.vest_months || null : null, person && h.vest_months ? h.cliff_months ?? 0 : null,
+          person ? h.start_date : null, person ? h.end_date : null, person ? h.vest_months || null : null, person && h.vest_months ? h.cliff_months ?? 0 : null, person && h.end_date ? h.shares_kept : null,
         );
         added++;
       } else if (p.kind === "update") { update("holders", HOLDER_COLS, p.sets, "id", p.id!); changed++; }
